@@ -739,28 +739,33 @@ void FieldData::assignment(std::vector<myhosthalo_str> &D,bool CIC,bool interlac
 				v += 0.5;
 				w += 0.5;
 			}
-			i1 = floor(u);
-			i2 = floor(v);
-			i3 = floor(w);
-
-			if(interlace){
-				i1 -= 1;
-				i2 -= 1;
-				i3 -= 1;
-			}
-			while(i1 >= (int)nx) i1 -= (int)nx;
-			while(i2 >= (int)ny) i2 -= (int)ny;
-			while(i3 >= (int)nz) i3 -= (int)nz;
-			while(i1 < 0) i1 += (int)nx;
-			while(i2 < 0) i2 += (int)ny;
-			while(i3 < 0) i3 += (int)nz;
-
 			if(!CIC){
+				i1 = floor(u);
+				i2 = floor(v);
+				i3 = floor(w);
+				while(i1 >= (int)nx) i1 -= (int)nx;
+				while(i2 >= (int)ny) i2 -= (int)ny;
+				while(i3 >= (int)nz) i3 -= (int)nz;
+				while(i1 < 0) i1 += (int)nx;
+				while(i2 < 0) i2 += (int)ny;
+				while(i3 < 0) i3 += (int)nz;
 				this->add_data( i1,  i2,  i3, 1.);
 			}else{
-				u -= i1;
-				v -= i2;
-				w -= i3;
+				i1 = floor(u); u -= i1;
+                        	i2 = floor(v); v -= i2;
+                        	i3 = floor(w); w -= i3;
+
+				if(interlace){
+					i1 -= 1;
+					i2 -= 1;
+					i3 -= 1;
+				}
+				while(i1 >= (int)nx) i1 -= (int)nx;
+				while(i2 >= (int)ny) i2 -= (int)ny;
+				while(i3 >= (int)nz) i3 -= (int)nz;
+				while(i1 < 0) i1 += (int)nx;
+				while(i2 < 0) i2 += (int)ny;
+				while(i3 < 0) i3 += (int)nz;
 
 				i1p = i1 + 1;
 				i2p = i2 + 1;

@@ -36,7 +36,7 @@ int main(int argc, char **argv){
     // Simulation parameters
     double Box;      // in Mpc/h
     double redshift; // The output redshift
-    int ng(500); // Number of grid points per dim for FFT
+    int ng(1000); // Number of grid points per dim for FFT
     int Npart1d;
 
     switch(snapnum){
@@ -76,7 +76,7 @@ int main(int argc, char **argv){
     param::parameter p2(FileBase+"/"+params_dir+"/"+class_param_file);
 
     Omega_m = p2.get<double>("Omega_m");
-    Omegam_fid = 0.301;
+    Omegam_fid = 0.31;
 
     std::cout << "Info from " << FileBase+"/"+params_dir+"/"+class_param_file << std::endl;
     std::cout << "Omega_m: " << Omega_m << std::endl << std::endl;
@@ -110,7 +110,7 @@ int main(int argc, char **argv){
         rand_num = gsl_rng_uniform(rand_ins);
 
 	if(prob >= rand_num){
-            halos[i].mass = halos_full[i].mass;
+            halos[ii].mass = halos_full[i].mass;
 	    for(int j=0;j<3;j++){
 	        halos[ii].pos[j] = halos_full[i].pos[j];
 	        halos[ii].vel[j] = halos_full[i].vel[j];
@@ -123,9 +123,16 @@ int main(int argc, char **argv){
 
     double sfac(get_sfac(redshift,FileBase+"/"+trans_dir+"/"+expansion_file));
 
-    FieldData halo_overdensity(ng,Box,false);
-    halo_overdensity.assignment(halos,false,false,sfac,2);
-    halo_overdensity.do_fft();
+    FieldData Df1(ng,Box,false);
+    Df1.assignment(halos,true,false,sfac,2);
+    Df1.do_fft();
+    FieldData Df2(ng,Box,false);
+    Df2.assignment(halos,true,true,sfac,2);
+    Df2.do_fft();
+    Df2.adjust_grid(); // correct for the phase shift
+
+    FieldData halo_overdensity(ng,Box,true);
+    halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
 
     // Monopole moment
     int ell = 0;
