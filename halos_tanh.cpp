@@ -36,7 +36,7 @@ int main(int argc, char **argv){
     // Simulation parameters
     double Box;      // in Mpc/h
     double redshift; // The output redshift
-    int ng(1000); // Number of grid points per dim for FFT
+    int ng(500); // Number of grid points per dim for FFT
     int Npart1d;
 
     switch(snapnum){
@@ -81,6 +81,16 @@ int main(int argc, char **argv){
     std::cout << "Info from " << FileBase+"/"+params_dir+"/"+class_param_file << std::endl;
     std::cout << "Omega_m: " << Omega_m << std::endl << std::endl;
 
+    std::string efile = FileBase+"/"+trans_dir+"/"+expansion_file;
+    double sfac(get_sfac(redshift,efile));
+
+    // std::cout << "### Check Alcock-Paczynski related scales ###" << std::endl;
+    // std::cout << "DA_true,org = " << ZtoComovingD_Q0000(redshift,Omega_m) << ",  DA_fid,org = " << ZtoComovingD_Q0000(redshift,Omegam_fid)
+    //     << ",  H_true,org = " << Hz_Q0000(redshift,Omega_m) << ",   H_fid,org = " << Hz_Q0000(redshift,Omegam_fid) << std::endl;
+
+    // std::cout << "DA_true,new = " << ZtoComovingD(redshift,efile) << ",  DA_fid,new = " << ZtoComovingD_LCDM(redshift,Omegam_fid)
+    //     << ",  H_true,new = " << Hz(redshift,efile) << ",   H_fid,new = " << Hz_LCDM(redshift,Omegam_fid) << std::endl;
+
     fftwf_init_threads();
     fftwf_plan_with_nthreads(omp_get_max_threads());
     std::cout << omp_get_max_threads() << " threads will be used in FFT." << std::endl;
@@ -121,13 +131,14 @@ int main(int argc, char **argv){
 
     halos.resize(ii);
 
-    double sfac(get_sfac(redshift,FileBase+"/"+trans_dir+"/"+expansion_file));
+
+    int los_dir = 2; // z direction
 
     FieldData Df1(ng,Box,false);
-    Df1.assignment(halos,true,false,sfac,2);
+    Df1.assignment(halos,true,false,sfac,los_dir);
     Df1.do_fft();
     FieldData Df2(ng,Box,false);
-    Df2.assignment(halos,true,true,sfac,2);
+    Df2.assignment(halos,true,true,sfac,los_dir);
     Df2.do_fft();
     Df2.adjust_grid(); // correct for the phase shift
 
@@ -136,20 +147,18 @@ int main(int argc, char **argv){
 
     // Monopole moment
     int ell = 0;
-    BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, Omega_m, Omegam_fid, redshift);
+    BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
     pk0.dump(OutBase+"_pk0.dat");
 
     // Quadrupole moment
     ell = 2;
-    BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, Omega_m, Omegam_fid, redshift);
+    BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
     pk2.dump(OutBase+"_pk2.dat");
 
     // Hexadecapole moment
     ell = 4;
-    BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, Omega_m, Omegam_fid, redshift);
+    BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
     pk4.dump(OutBase+"_pk4.dat");
-
-    std::cout << ii << std::endl;
 
     gsl_rng_free(rand_ins);
     exit(0);

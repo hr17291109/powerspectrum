@@ -90,9 +90,10 @@ private:
 	BinnedData calc_power_nowindow(int,float,float,bool,int) const;
 	BinnedData calc_power_noshot(int,float,float,bool,int) const;
 	BinnedData calc_power(int,float,float,bool,int) const;
-	BinnedData calc_power(int,float,float,bool,int,float,float,float) const;
-	BinnedData calc_power_x(int,float,float,bool,int,float,float,float) const;
-	BinnedData calc_power_y(int,float,float,bool,int,float,float,float) const;
+	BinnedData calc_power(int,float,float,bool,int,std::string,float,float,int) const;
+	// BinnedData calc_power(int,float,float,bool,int,float,float,float) const;
+	// BinnedData calc_power_x(int,float,float,bool,int,float,float,float) const;
+	// BinnedData calc_power_y(int,float,float,bool,int,float,float,float) const;
 	static BinnedData calc_cross_power_noshot(const FieldData &, const FieldData &, int, float,float,bool,bool,int);
 	static BinnedData calc_cross_power_noshot(const FieldData &, const FieldData &, int, float,float,bool,bool,bool,int);
 	static BinnedData calc_cross_power(const FieldData &, const FieldData &, int, float,float,bool,bool,int);
@@ -1148,10 +1149,10 @@ BinnedData FieldData::calc_power(int nbin, float kmin, float kmax, bool logbin, 
 	double redshift = 0.38;
 	double Omegam = 0.23108619451522827;
 	double Omegam_fid = 0.31;
-	double DAtarget = ZtoComovingD(redshift,Omegam);
-	double DAfid = ZtoComovingD(redshift,Omegam_fid);
-	double Htarget = Hz(redshift,Omegam);
-	double Hfid = Hz(redshift,Omegam_fid);
+	double DAtarget = ZtoComovingD_LCDM(redshift,Omegam);
+	double DAfid = ZtoComovingD_LCDM(redshift,Omegam_fid);
+	double Htarget = Hz_LCDM(redshift,Omegam);
+	double Hfid = Hz_LCDM(redshift,Omegam_fid);
 	float kfund_x = 2.*M_PI/(Lx * DAfid/DAtarget);
 	float kfund_y = 2.*M_PI/(Ly * DAfid/DAtarget);
 	float kfund_z = 2.*M_PI/(Lz * Htarget/Hfid);
@@ -1239,20 +1240,36 @@ BinnedData FieldData::calc_power(int nbin, float kmin, float kmax, bool logbin, 
 	return powerspec;
 }
 
-BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int ell,float Omegam,float Omegam_fid,float redshift) const {
+// BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int ell,float Omegam,float Omegam_fid,float redshift) const {
+BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int ell,std::string fname,float Omegam_fid,float redshift, int los_dir) const {
 	BinnedData powerspec(nbin,kmin,kmax,logbin);
 
 	//float DAtrue(ZtoComovingD(redshift,Omegam));
-    float DAtarget(ZtoComovingD(redshift,Omegam));
-	float DAfid(ZtoComovingD(redshift,Omegam_fid));
+    float DAtarget(ZtoComovingD(redshift,fname));
+	float DAfid(ZtoComovingD_LCDM(redshift,Omegam_fid));
 	//float Htrue(Hz(redshift,Omegam));
-	float Htarget(Hz(redshift,Omegam));
-	float Hfid(Hz(redshift,Omegam_fid));
+	float Htarget(Hz(redshift,fname));
+	float Hfid(Hz_LCDM(redshift,Omegam_fid));
 	if(redshift < 1e-4) DAtarget = DAfid = 1.;
 
 	float kfund_x = 2.*M_PI/(Lx*DAfid/DAtarget);
 	float kfund_y = 2.*M_PI/(Ly*DAfid/DAtarget);
-	float kfund_z = 2.*M_PI/(Lz*Htarget/Hfid);
+	float kfund_z = 2.*M_PI/(Lz*DAfid/DAtarget);
+
+	switch (los_dir){
+		case 0:
+			kfund_x = 2.*M_PI/(Lx*Htarget/Hfid);
+			break;
+		case 1:
+			kfund_y = 2.*M_PI/(Ly*Htarget/Hfid);
+			break;
+		case 2:
+			kfund_z = 2.*M_PI/(Lz*Htarget/Hfid);
+			break;
+		default:
+			kfund_z = 2.*M_PI/(Lz*Htarget/Hfid);
+			break;
+	}
 	float knyq_x = kfund_x * nx/2.;
 	float knyq_y = kfund_y * ny/2.;
 	float knyq_z = kfund_z * nz/2.;
@@ -1284,8 +1301,6 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 			wx = 1.0/gsl_sf_sinc(ii/((float)nx));
 			wx *= wx; // NGP
 			wx *= wx; // CIC
-			//wx2 = sin(M_PI * ii/((float)nx));
-			//wx2 = 1. - 2/3. * (wx2*wx2);       // shotnoise factor for CIC assignment
 			wx2 = cos(M_PI * ii/((float)nx));
 			wx2 = (1.+2*wx2+wx2*wx2)*(2+wx2)/12.;
 			for(int j=0;j<ny;j++){
@@ -1296,8 +1311,6 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 				wy = 1.0/gsl_sf_sinc(jj/((float)ny));
 				wy *= wy; // NGP
 				wy *= wy; // CIC
-				//wy2 = sin(M_PI * jj/((float)ny));
-				//wy2 = 1. - 2/3. * (wy2*wy2);       // shotnoise factor for CIC assignment
 				wy2 = cos(M_PI * jj/((float)ny));
 				wy2 = (1.+2*wy2+wy2*wy2)*(2+wy2)/12.;
 				for(int k=0;k<(int)nz/2;k++){
@@ -1312,15 +1325,25 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 					wz = 1.0/gsl_sf_sinc(kk/((float)nz));
 					wz *= wz; // NGP
 					wz *= wz; // CIC
-					//wz2 = sin(M_PI * kk/((float)nz));
-					//wz2 = 1. - 2/3. * (wz2*wz2);       // shotnoise factor for CIC assignment
 					wz2 = cos(M_PI * kk/((float)nz));
 					wz2 = (1.+2*wz2+wz2*wz2)*(2+wz2)/12.;
-					mu = kz/knorm;
+					switch (los_dir){
+						case 0:
+							mu = kx/knorm;
+							break;
+						case 1:
+							mu = ky/knorm;
+							break;
+						case 2:
+							mu = kz/knorm;
+							break;
+						default:
+							mu = kz/knorm;
+							break;
+					}
 					fre = this->get_data_re(i,j,k);
 					fim = this->get_data_im(i,j,k);
 					pnorm = wx*wy*wz*(vol*(fre*fre+fim*fim)-shotnoise*wx2*wy2*wz2);
-					//pnorm = wx*wy*wz*(vol*(fre*fre+fim*fim)-shotnoise);
 					pnorm *= (2.*ell+1.)*gsl_sf_legendre_Pl(ell, mu);
 					if(k==0) weight = 0.5;
 					else weight = 1.;
@@ -1337,6 +1360,7 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 	return powerspec;
 }
 
+#if 0
 BinnedData FieldData::calc_power_x(int nbin, float kmin,float kmax,bool logbin,int ell,float Omegam,float Omegam_fid,float redshift) const {
 	BinnedData powerspec(nbin,kmin,kmax,logbin);
 
@@ -1532,7 +1556,7 @@ BinnedData FieldData::calc_power_y(int nbin, float kmin,float kmax,bool logbin,i
 	}
 	return powerspec;
 }
-
+#endif
 
 BinnedData FieldData::calc_cross_power_noshot(const FieldData &f1, const FieldData &f2, int nbin, float kmin,float kmax,bool logbin,bool CIC,int ell){
 	BinnedData powerspec(nbin,kmin,kmax,logbin);
@@ -1896,10 +1920,10 @@ BinnedData FieldData::calc_propagator(const FieldData &f1, const FieldData &f2, 
 BinnedData_2D FieldData::calc_power_2D(int nbin, float kmin,float kmax,bool logbin, int nbin_mu,float Omegam,float Omegam_fid,float redshift) const {
 	BinnedData_2D powerspec(nbin,kmin,kmax,logbin,nbin_mu,0,1.0001,false);
 
-	float DAtrue(ZtoComovingD(redshift,Omegam));
-	float DAfid(ZtoComovingD(redshift,Omegam_fid));
-	float Htrue(Hz(redshift,Omegam));
-	float Hfid(Hz(redshift,Omegam_fid));
+	float DAtrue(ZtoComovingD_LCDM(redshift,Omegam));
+	float DAfid(ZtoComovingD_LCDM(redshift,Omegam_fid));
+	float Htrue(Hz_LCDM(redshift,Omegam));
+	float Hfid(Hz_LCDM(redshift,Omegam_fid));
 	if(redshift < 1e-4) DAtrue = DAfid = 1.;
 
 	float kfund_x = 2.*M_PI/(Lx*DAfid/DAtrue);
