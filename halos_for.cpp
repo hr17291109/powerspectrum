@@ -107,9 +107,8 @@ int main(int argc, char **argv){
 
     load_halo_full_vmaxthreshold(FileBase, snapnum, halos_full);
 
-    halos.resize(halos_full.size());
-    long long int j = 0;
-    long long int ii = 0;
+    double k = 0;
+    long long int ii;
     double prob;
     double rand_num;
 
@@ -121,9 +120,11 @@ int main(int argc, char **argv){
     ss1 << std::fixed << std::setprecision(2) << delta_v;
     std::string value_str1 = ss1.str();
 
-    for(j=v_th; j < v_th+5; j+=0.5){
+    for(k=v_th-10; k < v_th+10; k+=0.5){
+        ii = 0;
+        halos.resize(halos_full.size());
     	for(long long int i=0;i<halos.size();i++){
-            prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
+            prob = 0.5 * (1.0 + tanh((halos_full[i].mass - k) / delta_v));
             rand_num = gsl_rng_uniform(rand_ins);
 
 	    if(prob >= rand_num){
@@ -152,7 +153,7 @@ int main(int argc, char **argv){
         halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
 
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(2) << j;
+        ss << std::fixed << std::setprecision(2) << k;
         std::string value_str = ss.str();
 
         // Monopole moment
