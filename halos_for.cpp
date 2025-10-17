@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include <cmath>
 #include <vector>
 #include <omp.h>
@@ -107,6 +108,7 @@ int main(int argc, char **argv){
     load_halo_full_vmaxthreshold(FileBase, snapnum, halos_full);
 
     halos.resize(halos_full.size());
+    long long int j = 0;
     long long int ii = 0;
     double prob;
     double rand_num;
@@ -115,52 +117,60 @@ int main(int argc, char **argv){
     const gsl_rng_type * T = gsl_rng_default;
     rand_ins = gsl_rng_alloc (T);
 
-    for(long long int i=0;i<halos.size();i++){
-        prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
-        rand_num = gsl_rng_uniform(rand_ins);
+    std::stringstream ss1;
+    ss1 << std::fixed << std::setprecision(2) << delta_v;
+    std::string value_str1 = ss1.str();
 
-	if(prob >= rand_num){
-            halos[ii].mass = halos_full[i].mass;
-	    for(int j=0;j<3;j++){
-	        halos[ii].pos[j] = halos_full[i].pos[j];
-	        halos[ii].vel[j] = halos_full[i].vel[j];
+    for(j=v_th; j < v_th+5; j+=0.5){
+    	for(long long int i=0;i<halos.size();i++){
+            prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
+            rand_num = gsl_rng_uniform(rand_ins);
+
+	    if(prob >= rand_num){
+            	halos[ii].mass = halos_full[i].mass;
+	    	for(int j=0;j<3;j++){
+	            halos[ii].pos[j] = halos_full[i].pos[j];
+	            halos[ii].vel[j] = halos_full[i].vel[j];
+	        }
+                ii++;
 	    }
-            ii++;
-	}
+        }
+
+        halos.resize(ii);
+
+        int los_dir = 2; // z direction
+
+        FieldData Df1(ng,Box,false);
+        Df1.assignment(halos,true,false,sfac,los_dir);
+        Df1.do_fft();
+        FieldData Df2(ng,Box,false);
+        Df2.assignment(halos,true,true,sfac,los_dir);
+        Df2.do_fft();
+        Df2.adjust_grid(); // correct for the phase shift
+
+        FieldData halo_overdensity(ng,Box,true);
+        halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
+
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2) << j;
+        std::string value_str = ss.str();
+
+        // Monopole moment
+        int ell = 0;
+        BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+        pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
+
+        // Quadrupole moment
+        ell = 2;
+        BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+        pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
+
+        // Hexadecapole moment
+        ell = 4;
+        BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+        pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
+
     }
-
-    halos.resize(ii);
-
-
-    int los_dir = 2; // z direction
-
-    FieldData Df1(ng,Box,false);
-    Df1.assignment(halos,true,false,sfac,los_dir);
-    Df1.do_fft();
-    FieldData Df2(ng,Box,false);
-    Df2.assignment(halos,true,true,sfac,los_dir);
-    Df2.do_fft();
-    Df2.adjust_grid(); // correct for the phase shift
-
-    FieldData halo_overdensity(ng,Box,true);
-    halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
-
-    // Monopole moment
-    int ell = 0;
-    BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk0.dump(OutBase+"_pk0.dat");
-
-    // Quadrupole moment
-    ell = 2;
-    BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk2.dump(OutBase+"_pk2.dat");
-
-    // Hexadecapole moment
-    ell = 4;
-    BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk4.dump(OutBase+"_pk4.dat");
-
     gsl_rng_free(rand_ins);
-
     exit(0);
 }
