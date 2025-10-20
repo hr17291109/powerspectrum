@@ -91,6 +91,7 @@ private:
 	BinnedData calc_power_noshot(int,float,float,bool,int) const;
 	BinnedData calc_power(int,float,float,bool,int) const;
 	BinnedData calc_power(int,float,float,bool,int,std::string,float,float,int) const;
+	void calc_power(BinnedData&,int,std::string,float,float,int) const;
 	// BinnedData calc_power(int,float,float,bool,int,float,float,float) const;
 	// BinnedData calc_power_x(int,float,float,bool,int,float,float,float) const;
 	// BinnedData calc_power_y(int,float,float,bool,int,float,float,float) const;
@@ -1358,6 +1359,130 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 		}
 	}
 	return powerspec;
+}
+
+void FieldData::calc_power(BinnedData &powerspec,int ell,std::string fname,float Omegam_fid,float redshift, int los_dir) const {
+	// BinnedData powerspec(nbin,kmin,kmax,logbin);
+
+	int nbin = powerspec.get_nbin();
+	double kmin = powerspec.get_min();
+	double kmax = powerspec.get_max();
+	bool logbin = powerspec.get_logbin();
+
+	//float DAtrue(ZtoComovingD(redshift,Omegam));
+    float DAtarget(ZtoComovingD(redshift,fname));
+	float DAfid(ZtoComovingD_LCDM(redshift,Omegam_fid));
+	//float Htrue(Hz(redshift,Omegam));
+	float Htarget(Hz(redshift,fname));
+	float Hfid(Hz_LCDM(redshift,Omegam_fid));
+	if(redshift < 1e-4) DAtarget = DAfid = 1.;
+
+	float kfund_x = 2.*M_PI/(Lx*DAfid/DAtarget);
+	float kfund_y = 2.*M_PI/(Ly*DAfid/DAtarget);
+	float kfund_z = 2.*M_PI/(Lz*DAfid/DAtarget);
+
+	switch (los_dir){
+		case 0:
+			kfund_x = 2.*M_PI/(Lx*Htarget/Hfid);
+			break;
+		case 1:
+			kfund_y = 2.*M_PI/(Ly*Htarget/Hfid);
+			break;
+		case 2:
+			kfund_z = 2.*M_PI/(Lz*Htarget/Hfid);
+			break;
+		default:
+			kfund_z = 2.*M_PI/(Lz*Htarget/Hfid);
+			break;
+	}
+	float knyq_x = kfund_x * nx/2.;
+	float knyq_y = kfund_y * ny/2.;
+	float knyq_z = kfund_z * nz/2.;
+	float knyq_min = std::min({knyq_x,knyq_y,knyq_z});
+	float vol(Lx*DAfid/DAtarget*Ly*DAfid/DAtarget*Lz*Htarget/Hfid);
+	float shotnoise = vol/(float)ngal;
+	//std::cerr << "Fundamental wave numbers: " << kfund_x << "  " << kfund_y << "  " << kfund_z << std::endl;
+	//std::cerr << "Number of grids: " << nx << "  " << ny << "  " << nz << std::endl;
+	//std::cerr << "Volume: " << vol << std::endl;
+	//std::cerr << "Bins: " << nbin << "bins in [" << kmin << ", " << kmax << "), logartithm?" << logbin << std::endl;
+	//#pragma omp parallel
+	{
+		//	int ntasks = omp_get_num_threads();
+		//	int thistask = omp_get_thread_num();
+		float ii, jj, kk;
+		float kx, ky, kz;
+		float fre, fim;
+		float knorm, pnorm, mu;
+		float weight;
+		float wx, wy, wz;
+		float wx2, wy2, wz2;
+		//BinnedData local_pow = powerspec;
+		//#pragma omp for
+		for(int i=0;i<nx;i++){
+			ii = (i>nx/2)?i-(int)nx:i;
+			kx = kfund_x * ii;
+			if(fabs(kx)>powerspec.get_max()) continue;
+			if(fabs(kx)>knyq_x) continue;
+			wx = 1.0/gsl_sf_sinc(ii/((float)nx));
+			wx *= wx; // NGP
+			wx *= wx; // CIC
+			wx2 = cos(M_PI * ii/((float)nx));
+			wx2 = (1.+2*wx2+wx2*wx2)*(2+wx2)/12.;
+			for(int j=0;j<ny;j++){
+				jj = (j>ny/2)?j-(int)ny:j;
+				ky = kfund_y * jj;
+				if(fabs(ky)>powerspec.get_max()) continue;
+				if(fabs(ky)>knyq_y) continue;
+				wy = 1.0/gsl_sf_sinc(jj/((float)ny));
+				wy *= wy; // NGP
+				wy *= wy; // CIC
+				wy2 = cos(M_PI * jj/((float)ny));
+				wy2 = (1.+2*wy2+wy2*wy2)*(2+wy2)/12.;
+				for(int k=0;k<(int)nz/2;k++){
+					if(i==0&&j==0&&k==0) continue;
+					kk = (k>nz/2)?k-(int)nz:k;
+					kz = kfund_z * kk;
+					if(fabs(kz)>powerspec.get_max()) continue;
+					if(fabs(kz)>knyq_z) continue;
+					knorm = sqrt(kx*kx+ky*ky+kz*kz);
+					if(knorm>powerspec.get_max()) continue;
+					if(knorm>knyq_min) continue;
+					wz = 1.0/gsl_sf_sinc(kk/((float)nz));
+					wz *= wz; // NGP
+					wz *= wz; // CIC
+					wz2 = cos(M_PI * kk/((float)nz));
+					wz2 = (1.+2*wz2+wz2*wz2)*(2+wz2)/12.;
+					switch (los_dir){
+						case 0:
+							mu = kx/knorm;
+							break;
+						case 1:
+							mu = ky/knorm;
+							break;
+						case 2:
+							mu = kz/knorm;
+							break;
+						default:
+							mu = kz/knorm;
+							break;
+					}
+					fre = this->get_data_re(i,j,k);
+					fim = this->get_data_im(i,j,k);
+					pnorm = wx*wy*wz*(vol*(fre*fre+fim*fim)-shotnoise*wx2*wy2*wz2);
+					pnorm *= (2.*ell+1.)*gsl_sf_legendre_Pl(ell, mu);
+					if(k==0) weight = 0.5;
+					else weight = 1.;
+					//local_pow.push_data(knorm,pnorm,weight);
+					powerspec.push_data(knorm,pnorm,weight);
+				}
+			}
+		}
+		//#pragma omp critical
+		{
+			//powerspec = powerspec+local_pow;
+		}
+	}
+	// return powerspec;
 }
 
 #if 0

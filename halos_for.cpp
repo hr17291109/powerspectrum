@@ -120,6 +120,12 @@ int main(int argc, char **argv){
     ss1 << std::fixed << std::setprecision(2) << delta_v;
     std::string value_str1 = ss1.str();
 
+
+    FieldData Df1(ng,Box,false);
+    FieldData Df2(ng,Box,false);
+    FieldData halo_overdensity(ng,Box,true);
+
+
     for(k=v_th-10; k < v_th+10; k+=0.5){
         ii = 0;
         halos.resize(halos_full.size());
@@ -139,38 +145,53 @@ int main(int argc, char **argv){
 
         halos.resize(ii);
 
-        int los_dir = 2; // z direction
-
-        FieldData Df1(ng,Box,false);
-        Df1.assignment(halos,true,false,sfac,los_dir);
-        Df1.do_fft();
-        FieldData Df2(ng,Box,false);
-        Df2.assignment(halos,true,true,sfac,los_dir);
-        Df2.do_fft();
-        Df2.adjust_grid(); // correct for the phase shift
-
-        FieldData halo_overdensity(ng,Box,true);
-        halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
+        BinnedData pk0(nbins,kmin,kmax,logbin);
+        BinnedData pk2(nbins,kmin,kmax,logbin);
+        BinnedData pk4(nbins,kmin,kmax,logbin);
 
         std::stringstream ss;
         ss << std::fixed << std::setprecision(2) << k;
         std::string value_str = ss.str();
 
-        // Monopole moment
-        int ell = 0;
-        BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+        for(int los_dir = 0; los_dir<3; los_dir++){
+
+            Df1.clear_elements();
+            Df1.change_space(false);
+            Df1.assignment(halos,true,false,sfac,los_dir);
+            Df1.do_fft();
+            Df2.clear_elements();
+            Df2.change_space(false);
+            Df2.assignment(halos,true,true,sfac,los_dir);
+            Df2.do_fft();
+            Df2.adjust_grid(); // correct for the phase shift
+
+            halo_overdensity.clear_elements();
+            halo_overdensity.change_space(true);
+            halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
+
+
+            // Monopole moment
+            int ell = 0;
+            halo_overdensity.calc_power(pk0, ell, efile, Omegam_fid, redshift, los_dir);
+            // BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+            // pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
+
+            // Quadrupole moment
+            ell = 2;
+            halo_overdensity.calc_power(pk2, ell, efile, Omegam_fid, redshift, los_dir);
+            // BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+            // pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
+
+            // Hexadecapole moment
+            ell = 4;
+            halo_overdensity.calc_power(pk4, ell, efile, Omegam_fid, redshift, los_dir);
+            // BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
+            // pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
+
+        }
         pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
-
-        // Quadrupole moment
-        ell = 2;
-        BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
         pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
-
-        // Hexadecapole moment
-        ell = 4;
-        BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
         pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
-
     }
     gsl_rng_free(rand_ins);
     exit(0);
