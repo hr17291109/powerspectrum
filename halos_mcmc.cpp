@@ -8,6 +8,7 @@
 #include <vector>
 #include <omp.h>
 #include <fftw3.h>
+#include <random>
 #include "binneddata.hpp"
 #include "fielddata.hpp"
 #include "fileloader.hpp"
@@ -17,6 +18,8 @@
 #include "param.hpp"
 #include "filenames.hpp"
 #include <gsl/gsl_rng.h>
+#include <time.h>
+#include "pk_tools.hpp"
 
 int main(int argc, char **argv){
     std::string FileBase = argv[1];
@@ -24,6 +27,7 @@ int main(int argc, char **argv){
     std::string OutBase = argv[3];
     double v_th = atof(argv[4]);
     double delta_v = atof(argv[5]);
+    int NS(atoi(argv[6]));
 
     // Cosmological parameters
     double Omega_cb; // This is Omega_c + Omega_b, not Omega_m
@@ -39,16 +43,20 @@ int main(int argc, char **argv){
     double redshift; // The output redshift
     int ng(500); // Number of grid points per dim for FFT
     int Npart1d;
+    int zBOSS;
+    time_t t1 = time(0);
 
     switch(snapnum){
         case 0:
             redshift = 0.61;
+            zBOSS = 3;
             break;
         case 1:
             redshift = 0.51;
             break;
         case 2:
             redshift = 0.38;
+            zBOSS = 1;
             break;
         default:
             redshift = 0;
@@ -107,30 +115,69 @@ int main(int argc, char **argv){
 
     load_halo_full_vmaxthreshold(FileBase, snapnum, halos_full);
 
-    double k = 0;
+    std::string pk_file;
+    std::string Mfname;
+    std::string Wfname;
+    std::string Cfname;
+
+    switch(NS){
+        case 0:
+            pk_file = "BOSSmultipoles/ps1D_BOSS_DR12_NGC_z" + itos(zBOSS) + "_COMPnbar_TSC_700_700_700_400_renorm.dat";
+            Mfname = "BOSSmultipoles/M_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_1200_2000.matrix";
+            Wfname = "BOSSmultipoles/W_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
+            Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
+            break;
+        case 1:
+            pk_file = "BOSSmultipoles/ps1D_BOSS_DR12_SGC_z" + itos(zBOSS) + "_COMPnbar_TSC_700_700_700_400_renorm.dat";
+            Mfname = "BOSSmultipoles/M_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_1200_2000.matrix";
+            Wfname = "BOSSmultipoles/W_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
+            Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
+            break;
+    }
+
+    Eigen::VectorXd Bpk(120);
+    ps_fileload(pk_file, Bpk);
+
+    Eigen::MatrixXd M(2000, 1200);
+    Eigen::MatrixXd W(200, 2000);
+    Eigen::MatrixXd C(120, 120);
+    mwc_fileload(Mfname, Wfname, Cfname, M, W, C);
+
+    int k = 0;
     long long int ii;
     double prob;
     double rand_num;
+    double rand_num1;
 
     gsl_rng * rand_ins;
     const gsl_rng_type * T = gsl_rng_default;
     rand_ins = gsl_rng_alloc (T);
+    // gsl_rng_set(rand_ins, time(NULL));
 
-    std::stringstream ss1;
-    ss1 << std::fixed << std::setprecision(2) << delta_v;
-    std::string value_str1 = ss1.str();
-
+    // std::stringstream ss1;
+    // ss1 << std::fixed << std::setprecision(2) << delta_v;
+    // std::string value_str1 = ss1.str();
 
     FieldData Df1(ng,Box,false);
     FieldData Df2(ng,Box,false);
     FieldData halo_overdensity(ng,Box,true);
 
+    double chi2 = 0;
+    double r = 0;
 
-    for(k=v_th-10; k < v_th+10; k+=0.5){
+    int Nmc = 100;
+    double chi2list[Nmc];
+    double dvlist[Nmc];
+    double vthlist[Nmc];
+
+    for(k=0; k < Nmc; k++){
+        std::cout << "loop number: " << k << std::endl;
+        chi2 = 0;
+        gsl_rng_set(rand_ins, 12345);
         ii = 0;
         halos.resize(halos_full.size());
     	for(long long int i=0;i<halos.size();i++){
-            prob = 0.5 * (1.0 + tanh((halos_full[i].mass - k) / delta_v));
+            prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
             rand_num = gsl_rng_uniform(rand_ins);
 
 	    if(prob >= rand_num){
@@ -149,9 +196,9 @@ int main(int argc, char **argv){
         BinnedData pk2(nbins,kmin,kmax,logbin);
         BinnedData pk4(nbins,kmin,kmax,logbin);
 
-        std::stringstream ss;
-        ss << std::fixed << std::setprecision(2) << k;
-        std::string value_str = ss.str();
+        // std::stringstream ss;
+        // ss << std::fixed << std::setprecision(2) << v_th;
+        // std::string value_str = ss.str();
 
         for(int los_dir = 0; los_dir<3; los_dir++){
 
@@ -189,10 +236,94 @@ int main(int argc, char **argv){
             // pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
 
         }
-        pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
-        pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
-        pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
+        std::cout << "check delta_v = " << delta_v << std::endl;
+        std::cout << "check v_th = " << v_th << std::endl;
+	chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2);
+        std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
+        rand_num1 = gsl_rng_uniform(rand_ins);
+        if((chi2 < chi2list[k-1]) || k == 0) {
+            std::random_device rd;
+            std::mt19937 gen1(rd());
+            std::random_device rd2;
+            std::mt19937 gen2(rd2());
+            chi2list[k] = chi2;
+            std::normal_distribution<> d1(delta_v, 0.3);
+            dvlist[k] = delta_v;
+            delta_v = d1(gen1);
+            std::normal_distribution<> d2(v_th, 1);
+            vthlist[k] = v_th;
+            v_th = d2(gen2);
+            if(delta_v<0){
+                while(delta_v<0){
+                    std::random_device rd;
+                    std::mt19937 gen1(rd());
+                    std::normal_distribution<> d1(delta_v, 0.3);
+                    delta_v = d1(gen1);
+                }
+            }
+            std::cout << "if number: " << 0 << std::endl;
+        } else {
+            r = exp(-(chi2-chi2list[k-1])/2);
+            if(r > rand_num1) {
+                std::random_device rd;
+                std::mt19937 gen1(rd());
+                std::random_device rd2;
+                std::mt19937 gen2(rd2());
+                chi2list[k] = chi2;
+                std::normal_distribution<> d1(delta_v, 0.3);
+                dvlist[k] = delta_v;
+                delta_v = d1(gen1);
+                std::normal_distribution<> d2(v_th, 1);
+                vthlist[k] = v_th;
+                v_th = d2(gen2);
+                if(delta_v<0){
+                    while(delta_v<0){
+                        std::random_device rd;
+                        std::mt19937 gen1(rd());
+                        std::normal_distribution<> d1(delta_v, 0.3);
+                        delta_v = d1(gen1);
+                    }
+                }
+                std::cout << "if number: " << 1 << std::endl;
+            } else {
+               chi2list[k] = chi2list[k-1];
+               std::random_device rd;
+               std::mt19937 gen1(rd());
+               std::random_device rd2;
+               std::mt19937 gen2(rd2());
+               std::normal_distribution<> d1(dvlist[k-1], 0.3);
+               delta_v = d1(gen1);
+               dvlist[k] = dvlist[k-1];
+               std::normal_distribution<> d2(vthlist[k-1], 1);
+               v_th = d2(gen2);
+               vthlist[k] = vthlist[k-1];
+               if(delta_v<0){
+                   while(delta_v<0){
+                       std::random_device rd;
+                       std::mt19937 gen1(rd());
+                       std::normal_distribution<> d1(dvlist[k-1], 0.3);
+                       delta_v = d1(gen1);
+                   }
+                }
+               std::cout << "if number: " << 2 << std::endl;
+            }
+        }
+
+        std::cout << "##############################################" << std::endl;
+        //pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
+        //pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
+        //pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
     }
     gsl_rng_free(rand_ins);
+    std::ofstream ofile(OutBase+"_chi2.dat");
+    ofile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
+    ofile << std::setprecision(15);
+    for (int i = 0; i < Nmc; i++){
+        // std::cout << "chi2: " << chi2list[i] << std::endl;
+        ofile << dvlist[i] << " " << vthlist[i] << " " << chi2list[i] << std::endl;
+    }
+
+    time_t t2 = time(0);
+    std::cout << "finish time: " << t2-t1 << std::endl;
     exit(0);
 }
