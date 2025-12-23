@@ -41,7 +41,7 @@ int main(int argc, char **argv){
     // Simulation parameters
     double Box;      // in Mpc/h
     double redshift; // The output redshift
-    int ng(500); // Number of grid points per dim for FFT
+    int ng(512); // Number of grid points per dim for FFT
     int Npart1d;
     int zBOSS;
     time_t t1 = time(0);
@@ -147,9 +147,9 @@ int main(int argc, char **argv){
     long long int ii;
     double prob;
     double rand_num;
-    double rand_num1;
 
     gsl_rng * rand_ins;
+    gsl_rng_env_setup();
     const gsl_rng_type * T = gsl_rng_default;
     rand_ins = gsl_rng_alloc (T);
     // gsl_rng_set(rand_ins, time(NULL));
@@ -163,12 +163,11 @@ int main(int argc, char **argv){
     FieldData halo_overdensity(ng,Box,true);
 
     double chi2 = 0;
-    double r = 0;
 
-    int Nmc = 100;
-    double chi2list[Nmc];
-    double dvlist[Nmc];
-    double vthlist[Nmc];
+    int Nmc = 10;
+    std::vector<double> chi2list(Nmc);
+    std::vector<double> dvlist(Nmc);
+    std::vector<double> vthlist(Nmc);
 
     for(k=0; k < Nmc; k++){
         std::cout << "loop number: " << k << std::endl;
@@ -238,76 +237,10 @@ int main(int argc, char **argv){
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
         std::cout << "check v_th = " << v_th << std::endl;
-	chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2);
+	chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
-        rand_num1 = gsl_rng_uniform(rand_ins);
-        if((chi2 < chi2list[k-1]) || k == 0) {
-            std::random_device rd;
-            std::mt19937 gen1(rd());
-            std::random_device rd2;
-            std::mt19937 gen2(rd2());
-            chi2list[k] = chi2;
-            std::normal_distribution<> d1(delta_v, 0.3);
-            dvlist[k] = delta_v;
-            delta_v = d1(gen1);
-            std::normal_distribution<> d2(v_th, 1);
-            vthlist[k] = v_th;
-            v_th = d2(gen2);
-            if(delta_v<0){
-                while(delta_v<0){
-                    std::random_device rd;
-                    std::mt19937 gen1(rd());
-                    std::normal_distribution<> d1(delta_v, 0.3);
-                    delta_v = d1(gen1);
-                }
-            }
-            std::cout << "if number: " << 0 << std::endl;
-        } else {
-            r = exp(-(chi2-chi2list[k-1])/2);
-            if(r > rand_num1) {
-                std::random_device rd;
-                std::mt19937 gen1(rd());
-                std::random_device rd2;
-                std::mt19937 gen2(rd2());
-                chi2list[k] = chi2;
-                std::normal_distribution<> d1(delta_v, 0.3);
-                dvlist[k] = delta_v;
-                delta_v = d1(gen1);
-                std::normal_distribution<> d2(v_th, 1);
-                vthlist[k] = v_th;
-                v_th = d2(gen2);
-                if(delta_v<0){
-                    while(delta_v<0){
-                        std::random_device rd;
-                        std::mt19937 gen1(rd());
-                        std::normal_distribution<> d1(delta_v, 0.3);
-                        delta_v = d1(gen1);
-                    }
-                }
-                std::cout << "if number: " << 1 << std::endl;
-            } else {
-               chi2list[k] = chi2list[k-1];
-               std::random_device rd;
-               std::mt19937 gen1(rd());
-               std::random_device rd2;
-               std::mt19937 gen2(rd2());
-               std::normal_distribution<> d1(dvlist[k-1], 0.3);
-               delta_v = d1(gen1);
-               dvlist[k] = dvlist[k-1];
-               std::normal_distribution<> d2(vthlist[k-1], 1);
-               v_th = d2(gen2);
-               vthlist[k] = vthlist[k-1];
-               if(delta_v<0){
-                   while(delta_v<0){
-                       std::random_device rd;
-                       std::mt19937 gen1(rd());
-                       std::normal_distribution<> d1(dvlist[k-1], 0.3);
-                       delta_v = d1(gen1);
-                   }
-                }
-               std::cout << "if number: " << 2 << std::endl;
-            }
-        }
+
+        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_ins, k);
 
         std::cout << "##############################################" << std::endl;
         //pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
@@ -322,6 +255,7 @@ int main(int argc, char **argv){
         // std::cout << "chi2: " << chi2list[i] << std::endl;
         ofile << dvlist[i] << " " << vthlist[i] << " " << chi2list[i] << std::endl;
     }
+    ofile.close();
 
     time_t t2 = time(0);
     std::cout << "finish time: " << t2-t1 << std::endl;

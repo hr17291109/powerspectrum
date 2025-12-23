@@ -4,10 +4,13 @@
 #include <string>
 #include <cstdlib>
 #include <Eigen/Dense>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 
 void ps_fileload(std::string fname, Eigen::VectorXd &pk);
 void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Eigen::MatrixXd &M, Eigen::MatrixXd &W, Eigen::MatrixXd &C);
-void chi_square(Eigen::VectorXd pk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2);
+void chi_square(Eigen::VectorXd pk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2, double kmax);
+void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k);
 
 void ps_fileload(std::string fname, Eigen::VectorXd &pk){
     Eigen::VectorXd k_ps(400);
@@ -145,7 +148,7 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     // std::cout << "C" << C << std::endl;
 }
 
-void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2){
+void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2, double kmax){
     Eigen::VectorXd pk(1200);
     Eigen::VectorXd wmp(200);
     Eigen::MatrixXd Cinv;
@@ -180,10 +183,49 @@ void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen
     //std::cout <<  "wmp size: " << wmp.size() << std::endl;
     //std::cout << "psim size: " << psim.size() << std::endl;
     // std::cout << "Bpk :" << Bpk << std::endl;
+
     for (int i=0; i < Bpk.size(); i++){
         for (int j=0; j < Bpk.size(); j++){
             x2 += (Bpk(i)-psim(i))*Cinv(i,j)*(Bpk(j)-psim(j));
         }
     }
     // std::cout << "Cinv" << Cinv << std::endl;
+}
+
+void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k){
+    if((chi2 < chi2list[k-1]) || k == 0) {
+        chi2list[k] = chi2;
+        dvlist[k] = delta_v;
+        vthlist[k] = v_th;
+        delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
+        v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
+        while(delta_v<0){
+            delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
+        }
+        std::cout << "if number: " << 0 << std::endl;
+    } else {
+        double r = std::exp(-(chi2-chi2list[k-1])/2);
+        double rand_num = gsl_rng_uniform(rand_ins);
+        if(r > rand_num) {
+            chi2list[k] = chi2;
+            dvlist[k] = delta_v;
+            vthlist[k] = v_th;
+            delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
+            v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
+            while(delta_v<0){
+                delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
+            }
+            std::cout << "if number: " << 1 << std::endl;
+        } else {
+            chi2list[k] = chi2list[k-1];
+            dvlist[k] = dvlist[k-1];
+            vthlist[k] = vthlist[k-1];
+            delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
+            v_th = vthlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
+            while(delta_v<0){
+                delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
+            }
+            std::cout << "if number: " << 2 << std::endl;
+        }
+    }
 }

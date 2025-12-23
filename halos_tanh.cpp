@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include <cmath>
 #include <vector>
 #include <omp.h>
@@ -16,6 +17,8 @@
 #include "param.hpp"
 #include "filenames.hpp"
 #include <gsl/gsl_rng.h>
+#include "pk_tools.hpp"
+#include <time.h>
 
 int main(int argc, char **argv){
     std::string FileBase = argv[1];
@@ -23,6 +26,7 @@ int main(int argc, char **argv){
     std::string OutBase = argv[3];
     double v_th = atof(argv[4]);
     double delta_v = atof(argv[5]);
+    int NS(atoi(argv[6]));
 
     // Cosmological parameters
     double Omega_cb; // This is Omega_c + Omega_b, not Omega_m
@@ -38,16 +42,20 @@ int main(int argc, char **argv){
     double redshift; // The output redshift
     int ng(500); // Number of grid points per dim for FFT
     int Npart1d;
+    int zBOSS;
+    time_t t1 = time(0);
 
     switch(snapnum){
         case 0:
             redshift = 0.61;
+            zBOSS = 3;
             break;
         case 1:
             redshift = 0.51;
             break;
         case 2:
             redshift = 0.38;
+            zBOSS = 1;
             break;
         default:
             redshift = 0;
@@ -106,6 +114,34 @@ int main(int argc, char **argv){
 
     load_halo_full_vmaxthreshold(FileBase, snapnum, halos_full);
 
+    std::string pk_file;
+    std::string Mfname;
+    std::string Wfname;
+    std::string Cfname;
+
+    switch(NS){
+        case 0:
+            pk_file = "BOSSmultipoles/ps1D_BOSS_DR12_NGC_z" + itos(zBOSS) + "_COMPnbar_TSC_700_700_700_400_renorm.dat";
+            Mfname = "BOSSmultipoles/M_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_1200_2000.matrix";
+            Wfname = "BOSSmultipoles/W_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
+            Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_NGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
+            break;
+        case 1:
+            pk_file = "BOSSmultipoles/ps1D_BOSS_DR12_SGC_z" + itos(zBOSS) + "_COMPnbar_TSC_700_700_700_400_renorm.dat";
+            Mfname = "BOSSmultipoles/M_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_1200_2000.matrix";
+            Wfname = "BOSSmultipoles/W_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
+            Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
+            break;
+    }
+
+    Eigen::VectorXd Bpk(120);
+    ps_fileload(pk_file, Bpk);
+
+    Eigen::MatrixXd M(2000, 1200);
+    Eigen::MatrixXd W(200, 2000);
+    Eigen::MatrixXd C(120, 120);
+    mwc_fileload(Mfname, Wfname, Cfname, M, W, C);
+
     halos.resize(halos_full.size());
     long long int ii = 0;
     double prob;
@@ -114,6 +150,7 @@ int main(int argc, char **argv){
     gsl_rng * rand_ins;
     const gsl_rng_type * T = gsl_rng_default;
     rand_ins = gsl_rng_alloc (T);
+    double chi2 = 0;
 
     for(long long int i=0;i<halos.size();i++){
         prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
@@ -145,22 +182,36 @@ int main(int argc, char **argv){
     FieldData halo_overdensity(ng,Box,true);
     halo_overdensity.average2fields(Df1,Df2); // merge the 2 fields into one
 
+    std::stringstream ss1;
+    ss1 << std::fixed << std::setprecision(2) << delta_v;
+    std::string value_str1 = ss1.str();
+
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << v_th;
+    std::string value_str = ss.str();
+
     // Monopole moment
     int ell = 0;
     BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk0.dump(OutBase+"_pk0.dat");
 
     // Quadrupole moment
     ell = 2;
     BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk2.dump(OutBase+"_pk2.dat");
 
     // Hexadecapole moment
     ell = 4;
     BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-    pk4.dump(OutBase+"_pk4.dat");
+
+    std::cout << "check delta_v = " << std::setprecision(16) << delta_v << std::endl;
+    std::cout << "check v_th = " << std::setprecision(16) << v_th << std::endl;
+    chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
+    std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
+    pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
+    pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
+    pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
 
     gsl_rng_free(rand_ins);
-
+    time_t t2 = time(0);
+    std::cout << "finish time: " << t2-t1 << std::endl;
     exit(0);
 }

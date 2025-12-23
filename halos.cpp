@@ -92,9 +92,9 @@ int main(int argc, char **argv){
     load_halo_full_vmaxthreshold(FileBase, snapnum, halos_full);
 
     halos.resize(halos_full.size());
-    for(long long int i=0;i<halos.size();i++){
+    for(long long int i = 0; i < halos.size(); i++){
             halos[i].mass = halos_full[i].mass;
-            for(int j=0;j<3;j++){
+            for(int j = 0; j < 3; j++){
                     halos[i].pos[j] = halos_full[i].pos[j];
                     halos[i].vel[j] = halos_full[i].vel[j];
             }

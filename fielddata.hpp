@@ -1246,7 +1246,7 @@ BinnedData FieldData::calc_power(int nbin, float kmin,float kmax,bool logbin,int
 	BinnedData powerspec(nbin,kmin,kmax,logbin);
 
 	//float DAtrue(ZtoComovingD(redshift,Omegam));
-    float DAtarget(ZtoComovingD(redshift,fname));
+        float DAtarget(ZtoComovingD(redshift,fname));
 	float DAfid(ZtoComovingD_LCDM(redshift,Omegam_fid));
 	//float Htrue(Hz(redshift,Omegam));
 	float Htarget(Hz(redshift,fname));
@@ -1370,7 +1370,7 @@ void FieldData::calc_power(BinnedData &powerspec,int ell,std::string fname,float
 	bool logbin = powerspec.get_logbin();
 
 	//float DAtrue(ZtoComovingD(redshift,Omegam));
-    float DAtarget(ZtoComovingD(redshift,fname));
+        float DAtarget(ZtoComovingD(redshift,fname));
 	float DAfid(ZtoComovingD_LCDM(redshift,Omegam_fid));
 	//float Htrue(Hz(redshift,Omegam));
 	float Htarget(Hz(redshift,fname));
