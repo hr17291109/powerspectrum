@@ -184,6 +184,8 @@ int main(int argc, char **argv){
     }
 
     halos.resize(ii);
+    std::cout << "halos[10].pos[0] : " << halos[10].pos[0] << std::endl;
+    std::cout << "halos[10].vel[0] : " << halos[10].vel[0] << std::endl;
 
     BinnedData pk0(nbins, kmin, kmax, logbin);
     BinnedData pk2(nbins, kmin, kmax, logbin);
@@ -193,21 +195,22 @@ int main(int argc, char **argv){
         Df1.clear_elements();
         Df1.change_space(false);
         Df1.assignment(halos, true, false, sfac, los_dir);
-        //std::cout << "check Df1(10) : " << Df1.get_data(10) << std::endl;
+        //for(int j=0;j<10;j++) std::cout << "check Df1(j) : " << Df1.get_data(j) << std::endl;
         Df1.do_fft();
-        std::cout << "check Df1(10) after do fft : " << Df1.get_data(10) << std::endl;
+        std::cout << "check Df1(1000) after do fft : " << Df1.get_data(1000) << std::endl;
         Df2.clear_elements();
         Df2.change_space(false);
         Df2.assignment(halos, true, true, sfac, los_dir);
-        //std::cout << "check Df2(10) : " << Df2.get_data(10) << std::endl;
+        std::cout << "check Df2(1000) : " << Df2.get_data(1000) << std::endl;
         Df2.do_fft();
-        std::cout << "check Df2(10) after do fft : " << Df2.get_data(10) << std::endl;
+        std::cout << "check Df2(1000) after do fft : " << Df2.get_data(1000) << std::endl;
         Df2.adjust_grid(); // correct for the phase shift
+        std::cout << "check Df2(1000) after adjust_grid : " << Df2.get_data(1000) << std::endl;
 
         halo_overdensity.clear_elements();
         halo_overdensity.change_space(true);
         halo_overdensity.average2fields(Df1, Df2); // merge the 2 fields into one
-        std::cout << "check halo_overdensity(10) : " << halo_overdensity.get_data(10) << std::endl;
+        std::cout << "check halo_overdensity(1000) : " << halo_overdensity.get_data(1000) << std::endl;
         //std::cout << "check halo_overdensity_nx() : " << halo_overdensity.get_nx() << std::endl;
 
         // Monopole moment

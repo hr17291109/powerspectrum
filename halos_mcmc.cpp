@@ -175,6 +175,7 @@ int main(int argc, char **argv){
         gsl_rng_set(rand_ins, 12345);
         ii = 0;
         halos.resize(halos_full.size());
+        std::cout << "select halos ... ";
     	for(long long int i=0;i<halos.size();i++){
             prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
             rand_num = gsl_rng_uniform(rand_ins);
@@ -190,6 +191,7 @@ int main(int argc, char **argv){
         }
 
         halos.resize(ii);
+        std::cout << "done." << std::endl;
 
         BinnedData pk0(nbins,kmin,kmax,logbin);
         BinnedData pk2(nbins,kmin,kmax,logbin);
@@ -242,6 +244,10 @@ int main(int argc, char **argv){
 
         mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_ins, k);
 
+        std::cout << "after mcmc, check delta_v = " << delta_v << std::endl;
+        std::cout << "after mcmc, check v_th = " << v_th << std::endl;
+        time_t t2 = time(0);
+        std::cout << "finish time: " << t2-t1 << std::endl;
         std::cout << "##############################################" << std::endl;
         //pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
         //pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
@@ -257,7 +263,5 @@ int main(int argc, char **argv){
     }
     ofile.close();
 
-    time_t t2 = time(0);
-    std::cout << "finish time: " << t2-t1 << std::endl;
     exit(0);
 }

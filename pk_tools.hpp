@@ -197,11 +197,10 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
         chi2list[k] = chi2;
         dvlist[k] = delta_v;
         vthlist[k] = v_th;
-        delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
-        v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
-        while(delta_v<0){
+        do {
             delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
-        }
+            v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
+        } while(delta_v<0);
         std::cout << "if number: " << 0 << std::endl;
     } else {
         double r = std::exp(-(chi2-chi2list[k-1])/2);
@@ -210,21 +209,32 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
             chi2list[k] = chi2;
             dvlist[k] = delta_v;
             vthlist[k] = v_th;
-            delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
-            v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
-            while(delta_v<0){
+            do {
                 delta_v = delta_v + gsl_ran_gaussian(rand_ins, 4.0);
-            }
+                v_th = v_th + gsl_ran_gaussian(rand_ins, 4.0);
+            } while(delta_v<0);
             std::cout << "if number: " << 1 << std::endl;
         } else {
             chi2list[k] = chi2list[k-1];
             dvlist[k] = dvlist[k-1];
             vthlist[k] = vthlist[k-1];
-            delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
-            v_th = vthlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
-            while(delta_v<0){
-                delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, 4.0);
-            }
+            std::cout << "dvlist[k-1] : " << dvlist[k-1] << std::endl;
+            std::cout << "vthlist[k-1] : " << vthlist[k-1] << std::endl;
+            //std::cout << "gsl_ran_gaussian" << gsl_ran_gaussian(rand_ins, 4.0) << std::endl;
+            double last_dv = dvlist[k-1];
+            double last_vth = vthlist[k-1];
+            double new_dv;
+            double new_vth;
+            do {
+                new_dv = last_dv + gsl_ran_gaussian(rand_ins, 4.0);
+                new_vth = last_vth + gsl_ran_gaussian(rand_ins, 4.0);
+                std::cout << "new_dv : " << new_dv <<std::endl;
+                std::cout << "new_vth : " << new_vth <<std::endl;
+            } while(new_dv < 0);
+            delta_v = new_dv;
+            v_th = new_vth;
+            std::cout << "mcmc delta_v : " << delta_v << std::endl;
+            std::cout << "mcmc v_th : " << v_th << std::endl;
             std::cout << "if number: " << 2 << std::endl;
         }
     }

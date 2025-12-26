@@ -273,7 +273,7 @@ void FieldData::add_data (int a, int b, int c, float d){
 		std::cerr << "The function add_data does not work in Fourier space." << std::endl;
 		exit(-1);
 	}else{
-		#pragma omp atomic
+		//#pragma omp atomic
 		data[((long long int)a*(long long int)ny+(long long int)b)*(2*((long long int)nz/2+1))+(long long int)c] += d;
 	}
 }
@@ -606,14 +606,14 @@ void FieldData::assignment(std::vector<myhosthalo_str> &D,bool CIC,bool interlac
 	}
 	double P_tot(0);
 
-	#pragma omp parallel
+	//#pragma omp parallel
 	{
 		int ntasks = omp_get_num_threads();
 		int thistask = omp_get_thread_num();
 		int i1, i2, i3;
 		int i1p, i2p, i3p;
 		float u, v, w;
-		#pragma omp for schedule(guided)
+		//#pragma omp for schedule(guided)
 		for(int n=0;n<D.size();n++){
 			if(CIC){
 				u = (nx*D[n].pos[0])/Lx;
@@ -669,7 +669,7 @@ void FieldData::assignment(std::vector<myhosthalo_str> &D,bool CIC,bool interlac
 				this->add_data(i1p, i2p,  i3, (u)   *(v)   *(1.-w));
 				this->add_data(i1p, i2p, i3p, (u)   *(v)   *(w)   );
 			}
-			#pragma omp atomic
+			//#pragma omp atomic
 			P_tot += 1.;
 		}
 	}
