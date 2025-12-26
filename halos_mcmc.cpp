@@ -148,15 +148,13 @@ int main(int argc, char **argv){
     double prob;
     double rand_num;
 
-    gsl_rng * rand_ins;
+    gsl_rng * rand_halo;
+    gsl_rng * rand_mcmc;
     gsl_rng_env_setup();
     const gsl_rng_type * T = gsl_rng_default;
-    rand_ins = gsl_rng_alloc (T);
-    // gsl_rng_set(rand_ins, time(NULL));
-
-    // std::stringstream ss1;
-    // ss1 << std::fixed << std::setprecision(2) << delta_v;
-    // std::string value_str1 = ss1.str();
+    rand_halo = gsl_rng_alloc(T);
+    rand_mcmc = gsl_rng_alloc(T);
+    gsl_rng_set(rand_mcmc, 1);
 
     FieldData Df1(ng,Box,false);
     FieldData Df2(ng,Box,false);
@@ -168,26 +166,34 @@ int main(int argc, char **argv){
     std::vector<double> chi2list(Nmc);
     std::vector<double> dvlist(Nmc);
     std::vector<double> vthlist(Nmc);
+    std::ofstream dfile(OutBase+"_others_chi2.dat");
+    dfile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
+    dfile << std::setprecision(15);
+    std::ofstream ofile(OutBase+"_chi2.dat");
+    ofile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
+    ofile << std::setprecision(15);
 
     for(k=0; k < Nmc; k++){
         std::cout << "loop number: " << k << std::endl;
         chi2 = 0;
-        gsl_rng_set(rand_ins, 12345);
+        gsl_rng_set(rand_halo, 12345);
         ii = 0;
+        std::cout << "resize halos ... ";
         halos.resize(halos_full.size());
+        std::cout << "done." << std::endl;
         std::cout << "select halos ... ";
     	for(long long int i=0;i<halos.size();i++){
             prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
-            rand_num = gsl_rng_uniform(rand_ins);
+            rand_num = gsl_rng_uniform(rand_halo);
 
-	    if(prob >= rand_num){
-            	halos[ii].mass = halos_full[i].mass;
-	    	for(int j=0;j<3;j++){
-	            halos[ii].pos[j] = halos_full[i].pos[j];
-	            halos[ii].vel[j] = halos_full[i].vel[j];
-	        }
+            if(prob >= rand_num){
+                halos[ii].mass = halos_full[i].mass;
+                for(int j=0;j<3;j++){
+                    halos[ii].pos[j] = halos_full[i].pos[j];
+                    halos[ii].vel[j] = halos_full[i].vel[j];
+                }
                 ii++;
-	    }
+            }
         }
 
         halos.resize(ii);
@@ -196,10 +202,6 @@ int main(int argc, char **argv){
         BinnedData pk0(nbins,kmin,kmax,logbin);
         BinnedData pk2(nbins,kmin,kmax,logbin);
         BinnedData pk4(nbins,kmin,kmax,logbin);
-
-        // std::stringstream ss;
-        // ss << std::fixed << std::setprecision(2) << v_th;
-        // std::string value_str = ss.str();
 
         for(int los_dir = 0; los_dir<3; los_dir++){
 
@@ -239,13 +241,11 @@ int main(int argc, char **argv){
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
         std::cout << "check v_th = " << v_th << std::endl;
-	chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
+        chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
 
-        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_ins, k);
+        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile);
 
-        std::cout << "after mcmc, check delta_v = " << delta_v << std::endl;
-        std::cout << "after mcmc, check v_th = " << v_th << std::endl;
         time_t t2 = time(0);
         std::cout << "finish time: " << t2-t1 << std::endl;
         std::cout << "##############################################" << std::endl;
@@ -253,14 +253,9 @@ int main(int argc, char **argv){
         //pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
         //pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
     }
-    gsl_rng_free(rand_ins);
-    std::ofstream ofile(OutBase+"_chi2.dat");
-    ofile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
-    ofile << std::setprecision(15);
-    for (int i = 0; i < Nmc; i++){
-        // std::cout << "chi2: " << chi2list[i] << std::endl;
-        ofile << dvlist[i] << " " << vthlist[i] << " " << chi2list[i] << std::endl;
-    }
+    gsl_rng_free(rand_halo);
+    gsl_rng_free(rand_mcmc);
+    dfile.close();
     ofile.close();
 
     exit(0);
