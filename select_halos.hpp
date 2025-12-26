@@ -391,8 +391,8 @@ void load_halo(std::string FileBase, int snapnum, double threshold, double mp, d
 			//if(hstr[n].mass==0) nfake++;
 		}
 	}
-	omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
-
+	//omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
+        std::sort(hoststr.begin(), hoststr.end(), std::greater<>());
 
 	std::cerr << " Data sorted in descending order of mass." << std::endl;
 	if(ntake<nhosts){
@@ -748,8 +748,8 @@ void load_halo_full_massthreshold(std::string FileBase, int snapnum, double thre
 			//if(hstr[n].mass==0) nfake++;
 		}
 	}
-	omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
-
+	//omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
+	std::sort(hoststr.begin(), hoststr.end(), std::greater<>());
 
 	std::cerr << "Data sorted in descending order of mass." << std::endl;
 	std::cerr << "Least massive halo: " << hoststr[nhosts-1].mass << " M_sun/h" << std::endl;
@@ -857,8 +857,8 @@ void load_halo_full_vmaxthreshold(std::string FileBase, int snapnum, std::vector
 		// 	hoststr[n].prof[i] = prof[(unsigned long long int)n_profbins*n+i];
 		// }
 	}
-	omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
-
+	//omptl::sort(hoststr.begin(), hoststr.end(), std::greater<>());
+        std::sort(hoststr.begin(), hoststr.end(), std::greater<>());
 
 	std::cerr << "Data sorted in descending order of Vmax." << std::endl;
 	std::cerr << "Smallest Vmax: " << hoststr[nhalos-1].mass << " km/s" << std::endl;
