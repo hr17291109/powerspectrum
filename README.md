@@ -39,4 +39,4 @@ cd powerspectrum
 
 # Compile the C++ code (Example)
 # Ensure paths to Eigen, GSL, and FFTW are correctly set
-g++ -O3 -fopenmp -I/usr/include/eigen3 main.cpp -o run_mcmc -lgsl -lgslcblas -lm -lfftw3
+sh compile.sh
