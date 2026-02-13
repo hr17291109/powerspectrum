@@ -182,10 +182,12 @@ int main(int argc, char **argv){
             ii++;
         }
     }
+    std::cout << "Random number: " << rand_num << std::endl;
+    std::cout << "ii: " << ii << std::endl;
 
     halos.resize(ii);
-    std::cout << "halos[10].pos[0] : " << halos[10].pos[0] << std::endl;
-    std::cout << "halos[10].vel[0] : " << halos[10].vel[0] << std::endl;
+    //std::cout << "halos[10].pos[0] : " << halos[10].pos[0] << std::endl;
+    //std::cout << "halos[10].vel[0] : " << halos[10].vel[0] << std::endl;
 
     BinnedData pk0(nbins, kmin, kmax, logbin);
     BinnedData pk2(nbins, kmin, kmax, logbin);
@@ -232,7 +234,7 @@ int main(int argc, char **argv){
         // pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
 
     }
-    //std::cout << "check halo_overdensity(10) : " << halo_overdensity.get_data(10) << std::endl;
+    std::cout << "check halo_overdensity(100000) : " << halo_overdensity.get_data(100000) << std::endl;
     std::cout << "check delta_v = " << std::setprecision(16) << delta_v << std::endl;
     std::cout << "check v_th = " << std::setprecision(16) << v_th << std::endl;
     chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);

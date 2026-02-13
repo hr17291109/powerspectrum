@@ -162,16 +162,20 @@ int main(int argc, char **argv){
 
     double chi2 = 0;
 
-    int Nmc = 10;
+    int Nmc = 500;
     std::vector<double> chi2list(Nmc);
     std::vector<double> dvlist(Nmc);
     std::vector<double> vthlist(Nmc);
-    std::ofstream dfile(OutBase+"_others_chi2.dat");
+    std::ofstream dfile(OutBase+"_others_cov_chi2.dat");
     dfile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
     dfile << std::setprecision(15);
-    std::ofstream ofile(OutBase+"_chi2.dat");
+    std::ofstream ofile(OutBase+"_cov_chi2.dat");
     ofile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
     ofile << std::setprecision(15);
+
+    Eigen::Matrix2d Cov;
+    Cov << 125.82, 268.14,
+           268.14, 576.97;
 
     for(k=0; k < Nmc; k++){
         std::cout << "loop number: " << k << std::endl;
@@ -244,7 +248,7 @@ int main(int argc, char **argv){
         chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
 
-        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile);
+        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile, Cov);
 
         time_t t2 = time(0);
         std::cout << "finish time: " << t2-t1 << std::endl;
