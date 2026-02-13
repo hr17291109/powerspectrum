@@ -20,14 +20,36 @@
 #include <gsl/gsl_rng.h>
 #include <time.h>
 #include "pk_tools.hpp"
+#include <yaml-cpp/yaml.h>
 
 int main(int argc, char **argv){
-    std::string FileBase = argv[1];
-    int snapnum(atoi(argv[2]));
-    std::string OutBase = argv[3];
-    double v_th = atof(argv[4]);
-    double delta_v = atof(argv[5]);
-    int NS(atoi(argv[6]));
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
+        return 1;
+    }
+
+    YAML::Node config = YAML::LoadFile(argv[1]);
+
+    std::string FileBase = config["file_base"].as<std::string>();
+    int snapnum          = config["snapnum"].as<int>();
+    std::string OutBase  = config["output_base"].as<std::string>();
+    double v_th          = config["v_th"].as<double>();
+    double delta_v       = config["delta_v"].as<double>();
+    int NS               = config["ns_type"].as<int>();
+    int Nmc              = config["n_mc"].as<int>();
+    double kmax          = config["kmax"].as<double>();
+
+    Eigen::MatrixXd cov_mat(2, 2);
+    if (config["step_covariance"]) {
+        YAML::Node cov_node = config["step_covariance"];
+
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 2; ++j) {
+                cov_mat(i, j) = cov_node[i][j].as<double>();
+            }
+        }
+        std::cout << "Loaded Covariance Matrix:\n" << cov_mat << std::endl;
+    }
 
     // Cosmological parameters
     double Omega_cb; // This is Omega_c + Omega_b, not Omega_m
@@ -162,7 +184,6 @@ int main(int argc, char **argv){
 
     double chi2 = 0;
 
-    int Nmc = 500;
     std::vector<double> chi2list(Nmc);
     std::vector<double> dvlist(Nmc);
     std::vector<double> vthlist(Nmc);
@@ -172,10 +193,6 @@ int main(int argc, char **argv){
     std::ofstream ofile(OutBase+"_cov_chi2.dat");
     ofile << "delta_v" << " " << "Vmax_threshould" << " " << "chi2" << std::endl;
     ofile << std::setprecision(15);
-
-    Eigen::Matrix2d Cov;
-    Cov << 125.82, 268.14,
-           268.14, 576.97;
 
     for(k=0; k < Nmc; k++){
         std::cout << "loop number: " << k << std::endl;
@@ -245,10 +262,10 @@ int main(int argc, char **argv){
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
         std::cout << "check v_th = " << v_th << std::endl;
-        chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
+        chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, kmax);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
 
-        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile, Cov);
+        mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile, cov_mat);
 
         time_t t2 = time(0);
         std::cout << "finish time: " << t2-t1 << std::endl;
