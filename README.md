@@ -9,7 +9,7 @@ Cosmological Power Spectrum Analysis & MCMC Parameter Estimation
 ## Features
 * **Power Spectrum Calculation**: FFTWを用いたパワースペクトルおよび多重極モーメントの計算
 * **MCMC Sampling**: C++によるMetropolis-Hastingsアルゴリズムの実装（OpenMP並列化対応）
-* **Halo Analysis**: Friends-of-Friends (FoF) ハローファインダーおよび $V_{\text{max}}$ 等のハロープロパティの解析
+* **Halo Analysis**: ROCKSTAR ハローファインダーおよび $V_{\text{max}}$ 等のハロープロパティの解析
 * **Visualization**: Python (`getdist`, `matplotlib`) を用いた事後分布の等高線図（Contour plots）およびパワースペクトルのプロット作成
 
 ## Requirements
