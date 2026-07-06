@@ -5,12 +5,12 @@ snapnum: 0
 output_base: "output/Q0/HIGHZ_NGC_Q0_1000"
 
 # Model parameters
-v_th: 485
-delta_v: 100
+v_th: 467.4
+delta_v: 89.4
 ns_type: 0
 
-n_mc: 1000
-kmax: 0.4
+n_mc: 1
+kmax: 0.3
 
 step_covariance:
   - [119.41, 198.51]

@@ -173,7 +173,9 @@ void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen
     for (int i=0; i < Bpk.size(); i++){
         for (int j=0; j < Bpk.size(); j++){
             x2 += (Bpk(i)-psim(i))*Cinv(i,j)*(Bpk(j)-psim(j));
+            if (j == kmax*100) continue;
         }
+	if (i == kmax*100) continue;
     }
 }
 
