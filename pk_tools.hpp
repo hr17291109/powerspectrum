@@ -147,11 +147,10 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
 void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2, double kmax){
     Eigen::VectorXd pk(1200);
     Eigen::VectorXd wmp(200);
-    Eigen::MatrixXd Cinv;
     Eigen::VectorXd psim0(pk0.get_nbin());
     Eigen::VectorXd psim2(pk2.get_nbin());
     Eigen::VectorXd psim4(pk4.get_nbin());
-    Eigen::VectorXd psim(120);
+    Eigen::VectorXd psim_full(120);
 
     for (int i = 0; i < pk0.get_nbin(); i++){
         psim0(i) = pk0.get_ymean(i);
@@ -159,24 +158,42 @@ void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen
         psim4(i) = pk4.get_ymean(i);
     }
 
-    Cinv = C.inverse();
     pk << psim0, psim2, psim4;
     wmp = W*M*pk;
     int j = 0;
-    for (int i = 0; i < 200; i++){
-        if(i < 40 || (i >= 80 && i < 120) || i >= 160){
-            psim(j) = wmp(i);
+    for (int i = 0; i < 200; i++) {
+        if (i < 40 || (i >= 80 && i < 120) || i >= 160) {
+            psim_full(j) = wmp(i);
             j++;
         }
     }
-    std::cout << "wmp(0): " << wmp(0) << std::endl;
-    for (int i=0; i < Bpk.size(); i++){
-        for (int j=0; j < Bpk.size(); j++){
-            x2 += (Bpk(i)-psim(i))*Cinv(i,j)*(Bpk(j)-psim(j));
-            if (j == kmax*100) continue;
+
+    int block_size = 40;
+    int limit = std::round(kmax * 100.0);
+    int sub_size = limit * 3;
+    Eigen::MatrixXd C_sub(sub_size, sub_size);
+    Eigen::VectorXd Bpk_sub(sub_size);
+    Eigen::VectorXd psim_sub(sub_size);
+
+    for (int m_row = 0; m_row < 3; m_row++) {
+        int orig_row_start = m_row * block_size;
+        int sub_row_start = m_row * limit;
+
+        Bpk_sub.segment(sub_row_start, limit) = Bpk.segment(orig_row_start, limit);
+        psim_sub.segment(sub_row_start, limit) = psim_full.segment(orig_row_start, limit);
+
+        for (int m_col = 0; m_col < 3; ++m_col) {
+            int orig_col_start = m_col * block_size;
+            int sub_col_start = m_col * limit;
+
+            C_sub.block(sub_row_start, sub_col_start, limit, limit) =
+                C.block(orig_row_start, orig_col_start, limit, limit);
         }
-	if (i == kmax*100) continue;
     }
+
+    Eigen::MatrixXd Cinv_sub = C_sub.inverse();
+    Eigen::VectorXd delta = Bpk_sub - psim_sub;
+    x2 = delta.transpose() * Cinv_sub * delta;
 }
 
 void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k, std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov){
