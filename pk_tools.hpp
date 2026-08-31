@@ -6,11 +6,7 @@
 #include <Eigen/Dense>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
-
-void ps_fileload(std::string fname, Eigen::VectorXd &pk);
-void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Eigen::MatrixXd &M, Eigen::MatrixXd &W, Eigen::MatrixXd &C);
-void chi_square(Eigen::VectorXd pk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2, double kmax);
-void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k, std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov);
+#include "binneddata.hpp"
 
 void ps_fileload(std::string fname, Eigen::VectorXd &pk){
     Eigen::VectorXd k_ps(400);
@@ -34,9 +30,9 @@ void ps_fileload(std::string fname, Eigen::VectorXd &pk){
     std::string line;
     int i = 0;
 
-    while(std::getline(file, line)) {
+    while (std::getline(file, line)) {
         if (within_header < 2){
-            if(line == "### header ###"){
+            if (line == "### header ###"){
                 within_header += 1;
             }
         } else{
@@ -101,10 +97,10 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
 
     std::cout <<  "load W file ... ";
     std::ifstream Wfile(Wfname);
-    for(int i = 0; i < 200; i++){
+    for (int i = 0; i < 200; i++){
         std::getline(Wfile, line);
         std::istringstream issw(line);
-        for(int j = 0; j < 2000; j++){
+        for (int j = 0; j < 2000; j++){
             issw >> W(i, j);
         }
     }
@@ -144,13 +140,14 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     std::cout <<  "C cols: " << C.cols() << std::endl;
 }
 
-void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen::MatrixXd C, BinnedData pk0, BinnedData pk2, BinnedData pk4, double &x2, double kmax){
+void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eigen::MatrixXd &C, const BinnedData &pk0, const BinnedData &pk2, const BinnedData &pk4, double &x2, double kmax) {
     Eigen::VectorXd pk(1200);
     Eigen::VectorXd wmp(200);
     Eigen::VectorXd psim0(pk0.get_nbin());
     Eigen::VectorXd psim2(pk2.get_nbin());
     Eigen::VectorXd psim4(pk4.get_nbin());
     Eigen::VectorXd psim_full(120);
+    constexpr int kNbinPerMultipole = 40;
 
     for (int i = 0; i < pk0.get_nbin(); i++){
         psim0(i) = pk0.get_ymean(i);
@@ -159,31 +156,32 @@ void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen
     }
 
     pk << psim0, psim2, psim4;
-    wmp = W*M*pk;
+    wmp = WM*pk;
     int j = 0;
-    for (int i = 0; i < 200; i++) {
-        if (i < 40 || (i >= 80 && i < 120) || i >= 160) {
+    for (int i = 0; i < kNbinPerMultipole*5; i++) {
+        if (i < kNbinPerMultipole || (i >= kNbinPerMultipole*2 && i < kNbinPerMultipole*3) || 
+        i >= kNbinPerMultipole*4) {
             psim_full(j) = wmp(i);
             j++;
         }
     }
 
-    int block_size = 40;
-    int limit = std::round(kmax * 100.0);
+	constexpr double kBinWidth = 0.01;
+	int limit = static_cast<int>(std::round(kmax / kBinWidth));
     int sub_size = limit * 3;
     Eigen::MatrixXd C_sub(sub_size, sub_size);
     Eigen::VectorXd Bpk_sub(sub_size);
     Eigen::VectorXd psim_sub(sub_size);
 
     for (int m_row = 0; m_row < 3; m_row++) {
-        int orig_row_start = m_row * block_size;
+        int orig_row_start = m_row * kNbinPerMultipole;
         int sub_row_start = m_row * limit;
 
         Bpk_sub.segment(sub_row_start, limit) = Bpk.segment(orig_row_start, limit);
         psim_sub.segment(sub_row_start, limit) = psim_full.segment(orig_row_start, limit);
 
-        for (int m_col = 0; m_col < 3; ++m_col) {
-            int orig_col_start = m_col * block_size;
+        for (int m_col = 0; m_col < 3; m_col++) {
+            int orig_col_start = m_col * kNbinPerMultipole;
             int sub_col_start = m_col * limit;
 
             C_sub.block(sub_row_start, sub_col_start, limit, limit) =
@@ -191,12 +189,15 @@ void chi_square(Eigen::VectorXd Bpk, Eigen::MatrixXd M, Eigen::MatrixXd W, Eigen
         }
     }
 
-    Eigen::MatrixXd Cinv_sub = C_sub.inverse();
+    
     Eigen::VectorXd delta = Bpk_sub - psim_sub;
-    x2 = delta.transpose() * Cinv_sub * delta;
+    Eigen::LDLT<Eigen::MatrixXd> ldlt(C_sub);
+    x2 = delta.dot(ldlt.solve(delta));
+    //Eigen::MatrixXd Cinv_sub = C_sub.inverse();
+    //x2 = delta.transpose() * Cinv_sub * delta;
 }
 
-void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k, std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov){
+void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k, std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov) {
     float dv_sig   = 4.0;
     float vth_sig  = 4.0;
     //double sfac = 0.001;
@@ -205,7 +206,7 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
     double cov_xy  = cov(0, 1);
     double rho     = cov_xy / (sigma_x * sigma_y);
     double step_dv, step_vth;
-    if((chi2 < chi2list[k-1]) || k == 0) {
+    if (k == 0 || chi2 < chi2list[k-1]) {
         chi2list[k] = chi2;
         dvlist[k] = delta_v;
         vthlist[k] = v_th;
@@ -216,12 +217,12 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
             v_th += step_vth;
             //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
             //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
-        } while(delta_v < 0 || v_th < 0);
+        } while (delta_v < 0 || v_th < 0);
         std::cout << "if number: " << 0 << std::endl;
     } else {
         double r = std::exp(-(chi2-chi2list[k-1])/2);
         double rand_num = gsl_rng_uniform(rand_ins);
-        if(r > rand_num) {
+        if (r > rand_num) {
             chi2list[k] = chi2;
             dvlist[k] = delta_v;
             vthlist[k] = v_th;
@@ -232,7 +233,7 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
                 v_th += step_vth;
                 //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
                 //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
-            } while(delta_v < 0 || v_th < 0);
+            } while (delta_v < 0 || v_th < 0);
             std::cout << "if number: " << 1 << std::endl;
         } else {
             chi2list[k] = chi2list[k-1];
@@ -246,7 +247,7 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
                 v_th = vthlist[k-1] + step_vth;
                 //delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, dv_sig);
                 //v_th = vthlist[k-1] + gsl_ran_gaussian(rand_ins, vth_sig);
-            } while(delta_v < 0 || v_th < 0);
+            } while (delta_v < 0 || v_th < 0);
             std::cout << "if number: " << 2 << std::endl;
         }
     }

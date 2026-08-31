@@ -9,6 +9,9 @@
 #include <omp.h>
 #include <fftw3.h>
 #include <random>
+#include <gsl/gsl_rng.h>
+#include <time.h>
+#include <yaml-cpp/yaml.h>
 #include "binneddata.hpp"
 #include "fielddata.hpp"
 #include "fileloader.hpp"
@@ -17,10 +20,7 @@
 #include "binning.hpp"
 #include "param.hpp"
 #include "filenames.hpp"
-#include <gsl/gsl_rng.h>
-#include <time.h>
 #include "pk_tools.hpp"
-#include <yaml-cpp/yaml.h>
 
 int main(int argc, char **argv){
     if (argc < 2) {
@@ -155,6 +155,9 @@ int main(int argc, char **argv){
             Wfname = "BOSSmultipoles/W_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
             Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
             break;
+		default:
+			std::cerr << "Invalid ns_type: " << NS << std::endl;
+    		return 1;
     }
 
     Eigen::VectorXd Bpk(120);
@@ -164,6 +167,7 @@ int main(int argc, char **argv){
     Eigen::MatrixXd W(200, 2000);
     Eigen::MatrixXd C(120, 120);
     mwc_fileload(Mfname, Wfname, Cfname, M, W, C);
+    Eigen::MatrixXd WM = W * M;
 
     int k = 0;
     long long int ii;
@@ -178,9 +182,9 @@ int main(int argc, char **argv){
     rand_mcmc = gsl_rng_alloc(T);
     gsl_rng_set(rand_mcmc, 1);
 
-    FieldData Df1(ng,Box,false);
-    FieldData Df2(ng,Box,false);
-    FieldData halo_overdensity(ng,Box,true);
+    FieldData Df1(ng, Box, false);
+    FieldData Df2(ng, Box, false);
+    FieldData halo_overdensity(ng, Box, true);
 
     double chi2 = 0;
 
@@ -262,7 +266,7 @@ int main(int argc, char **argv){
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
         std::cout << "check v_th = " << v_th << std::endl;
-        chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, kmax);
+        chi_square(Bpk, WM, C, pk0, pk2, pk4, chi2, kmax);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
 
         mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile, cov_mat);
@@ -279,5 +283,5 @@ int main(int argc, char **argv){
     dfile.close();
     ofile.close();
 
-    exit(0);
+    return 0;
 }
