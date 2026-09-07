@@ -207,7 +207,7 @@ int main(int argc, char **argv){
         halos.resize(halos_full.size());
         std::cout << "done." << std::endl;
         std::cout << "select halos ... ";
-    	for(long long int i=0;i<halos.size();i++){
+    	for(long long int i = 0; i < halos.size(); i++){
             prob = 0.5 * (1.0 + tanh((halos_full[i].mass - v_th) / delta_v));
             rand_num = gsl_rng_uniform(rand_halo);
 
@@ -228,7 +228,7 @@ int main(int argc, char **argv){
         BinnedData pk2(nbins,kmin,kmax,logbin);
         BinnedData pk4(nbins,kmin,kmax,logbin);
 
-        for(int los_dir = 0; los_dir<3; los_dir++){
+        for(int los_dir = 0; los_dir < 3; los_dir++){
 
             Df1.clear_elements();
             Df1.change_space(false);

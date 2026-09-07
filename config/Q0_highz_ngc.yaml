@@ -9,7 +9,7 @@ delta_v: 89.4
 ns_type: 0
 
 n_mc: 500
-kmax: 0.3
+kmax: 0.30
 
 step_covariance:
   - [119.41, 198.51]

@@ -67,23 +67,23 @@ BinnedData::BinnedData(int a, double b, double c, bool d){
 		std::cerr << "Negative values do not fit in logarithmic binning. Aborting." << std::endl;
 		exit(1);
 	}
-	if(logbin){
+	if (logbin) {
 		ratio = pow(maximum/minimum,1./(double)nbin);
 		logratio = log(ratio);
-		for(int n=0;n<nbin+1;n++){
+		for(int n=0;n<nbin+1;n++) {
 				xbin.push_back(minimum*pow(ratio,n));
 		}
-		for(int n=0;n<nbin;n++){
+		for(int n=0;n<nbin;n++) {
 			xmin.push_back(minimum*pow(ratio,n));
 			xmax.push_back(minimum*pow(ratio,n+1));
 			xcen.push_back(minimum*pow(ratio,n+0.5));
 		}
-	}else{
+	} else {
 		difference = (maximum-minimum)/(double)nbin;
-		for(int n=0;n<nbin+1;n++){
+		for(int n=0;n<nbin+1;n++) {
 			xbin.push_back(minimum+difference*n);
 		}
-	  for(int n=0;n<nbin;n++){
+	  	for(int n=0;n<nbin;n++){
 			xmin.push_back(minimum+difference*n);
 			xmax.push_back(minimum+difference*(n+1));
 			xcen.push_back(minimum+difference*(n+0.5));

@@ -132,6 +132,9 @@ int main(int argc, char **argv){
             Wfname = "BOSSmultipoles/W_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix";
             Cfname = "BOSSmultipoles/C_2048_BOSS_DR12_SGC_z"+ itos(zBOSS) +"_V6C_1_1_1_1_1_10_200_200_prerecon.matrix";
             break;
+		default:
+			std::cerr << "Invalid ns_type: " << NS << std::endl;
+    		return 1;
     }
 
     Eigen::VectorXd Bpk(120);
@@ -141,6 +144,7 @@ int main(int argc, char **argv){
     Eigen::MatrixXd W(200, 2000);
     Eigen::MatrixXd C(120, 120);
     mwc_fileload(Mfname, Wfname, Cfname, M, W, C);
+    Eigen::MatrixXd WM = W * M;
 
     double k = 0;
     long long int ii;
@@ -237,7 +241,7 @@ int main(int argc, char **argv){
     std::cout << "check halo_overdensity(100000) : " << halo_overdensity.get_data(100000) << std::endl;
     std::cout << "check delta_v = " << std::setprecision(16) << delta_v << std::endl;
     std::cout << "check v_th = " << std::setprecision(16) << v_th << std::endl;
-    chi_square(Bpk, M, W, C, pk0, pk2, pk4, chi2, 0.4);
+    chi_square(Bpk, WM, C, pk0, pk2, pk4, chi2, 0.35);
     std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
     pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
     pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
@@ -246,5 +250,5 @@ int main(int argc, char **argv){
     gsl_rng_free(rand_ins);
     time_t t2 = time(0);
     std::cout << "finish time: " << t2-t1 << std::endl;
-    exit(0);
+    return 0;
 }
