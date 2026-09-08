@@ -1,3 +1,6 @@
+#pragma once
+#include "binning.hpp"
+#include "binneddata.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -140,7 +143,7 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     std::cout <<  "C cols: " << C.cols() << std::endl;
 }
 
-void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eigen::MatrixXd &C, const BinnedData &pk0, const BinnedData &pk2, const BinnedData &pk4, double &x2, double kmax) {
+void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eigen::MatrixXd &C, const BinnedData &pk0, const BinnedData &pk2, const BinnedData &pk4, double &x2, double fit_kmax) {
     Eigen::VectorXd pk(1200);
     Eigen::VectorXd wmp(200);
     Eigen::VectorXd psim0(pk0.get_nbin());
@@ -166,8 +169,12 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
         }
     }
 
-	constexpr double kBinWidth = 0.01;
-	int limit = static_cast<int>(std::round(kmax / kBinWidth));
+    constexpr double kBinWidth = kmax / kNbinPerMultipole;
+    int limit = static_cast<int>(std::round(fit_kmax / kBinWidth));
+    if (limit < 1 || limit > kNbinPerMultipole) {
+        std::cerr << "invalid fit_kmax: " << fit_kmax << std::endl;
+        std::exit(1);
+    }
     int sub_size = limit * 3;
     Eigen::MatrixXd C_sub(sub_size, sub_size);
     Eigen::VectorXd Bpk_sub(sub_size);

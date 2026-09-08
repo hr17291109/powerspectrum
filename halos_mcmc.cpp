@@ -37,7 +37,7 @@ int main(int argc, char **argv){
     double delta_v       = config["delta_v"].as<double>();
     int NS               = config["ns_type"].as<int>();
     int Nmc              = config["n_mc"].as<int>();
-    double kmax          = config["kmax"].as<double>();
+    double fit_kmax          = config["kmax"].as<double>();
 
     Eigen::MatrixXd cov_mat(2, 2);
     if (config["step_covariance"]) {
@@ -266,7 +266,7 @@ int main(int argc, char **argv){
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
         std::cout << "check v_th = " << v_th << std::endl;
-        chi_square(Bpk, WM, C, pk0, pk2, pk4, chi2, kmax);
+        chi_square(Bpk, WM, C, pk0, pk2, pk4, chi2, fit_kmax);
         std::cout << "chi2 = " << std::setprecision(16) << chi2 << std::endl;
 
         mcmc(chi2, delta_v, v_th, chi2list, dvlist, vthlist, rand_mcmc, k, ofile, dfile, cov_mat);
