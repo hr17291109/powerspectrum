@@ -196,7 +196,7 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
         }
     }
 
-    
+
     Eigen::VectorXd delta = Bpk_sub - psim_sub;
     Eigen::LDLT<Eigen::MatrixXd> ldlt(C_sub);
     x2 = delta.dot(ldlt.solve(delta));
@@ -220,8 +220,8 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
         ofs << dvlist[k] << " " << vthlist[k] << " " << chi2list[k] << std::endl;
         do {
             gsl_ran_bivariate_gaussian(rand_ins, sigma_x, sigma_y, rho, &step_dv, &step_vth);
-            delta_v += step_dv;
-            v_th += step_vth;
+            delta_v = dvlist[k] + step_dv;
+            v_th = vthlist[k] + step_vth;
             //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
             //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
         } while (delta_v < 0 || v_th < 0);
@@ -236,8 +236,8 @@ void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2l
             ofs << dvlist[k] << " " << vthlist[k] << " " << chi2list[k] << std::endl;
             do {
                 gsl_ran_bivariate_gaussian(rand_ins, sigma_x, sigma_y, rho, &step_dv, &step_vth);
-                delta_v += step_dv;
-                v_th += step_vth;
+                delta_v = dvlist[k] + step_dv;
+                v_th = vthlist[k] + step_vth;
                 //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
                 //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
             } while (delta_v < 0 || v_th < 0);

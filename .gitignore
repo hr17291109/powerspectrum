@@ -1,0 +1,15 @@
+# Build artifacts
+*.exe
+*.o
+
+# Python
+__pycache__/
+*.pyc
+
+# Simulation input/output data
+input/
+output/
+
+# Host-specific symlinks to external mounts
+/BOSSmultipoles
+/data

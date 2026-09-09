@@ -273,7 +273,7 @@ void FieldData::add_data (int a, int b, int c, float d){
 		std::cerr << "The function add_data does not work in Fourier space." << std::endl;
 		exit(-1);
 	}else{
-		//#pragma omp atomic
+		#pragma omp atomic
 		data[((long long int)a*(long long int)ny+(long long int)b)*(2*((long long int)nz/2+1))+(long long int)c] += d;
 	}
 }
