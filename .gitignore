@@ -5,10 +5,15 @@
 # Python
 __pycache__/
 *.pyc
+.ipynb_checkpoints/
 
 # Simulation input/output data
 input/
 output/
+gp_output/
+mlruns/
+evidence/
+plot/
 
 # Host-specific symlinks to external mounts
 /BOSSmultipoles
