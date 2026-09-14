@@ -730,7 +730,7 @@ void FieldData::assignment(std::vector<myhosthalo_str> &D,bool CIC,bool interlac
 					w = (nz*D[n].pos[2])/Lz+0.5;
 				}else if(los_dir==2){
 					u = (nx*D[n].pos[0])/Lx+0.5;
-					v = (ny*D[n].pos[1])/Lz+0.5;
+					v = (ny*D[n].pos[1])/Ly+0.5;
 					w = (nz*(D[n].pos[2]+sfac*D[n].vel[2]))/Lz+0.5;
 				}else{
 					std::cerr << "Invalid los direction!!" << std::endl;
