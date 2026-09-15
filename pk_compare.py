@@ -32,6 +32,7 @@ class PowerSpectrumData:
         self.M = np.loadtxt(f"{base_path}M_BOSS_DR12_{self.ns_type}_z{str(self.z)}_V6C_1_1_1_1_1_1200_2000.matrix")
         self.window_mat = np.loadtxt(f"{base_path}W_BOSS_DR12_{self.ns_type}_z{str(self.z)}_V6C_1_1_1_1_1_10_200_2000_averaged_v1.matrix")
         self.cov_mat = np.loadtxt(f"{base_path}C_2048_BOSS_DR12_{self.ns_type}_z{str(self.z)}_V6C_1_1_1_1_1_10_200_200_prerecon.matrix")
+        self.WM = self.window_mat @ self.M
 
         self.k = pk['k']
         n_bins = len(self.k)
@@ -51,9 +52,6 @@ class PowerSpectrumData:
         rows_to_delete = np.array(rows_to_delete)
         cols_to_delete = rows_to_delete.copy()
 
-        #rows_to_delete = np.r_[n_bins : 2*n_bins, 3*n_bins : 4*n_bins]
-        #cols_to_delete = np.r_[n_bins : 2*n_bins, 3*n_bins : 4*n_bins]
-
         # create indexes except rows and cols
         total_bins = 5 * n_bins
         rows_to_keep = np.delete(np.arange(total_bins), rows_to_delete)
@@ -61,9 +59,13 @@ class PowerSpectrumData:
 
         # create a new matrix from the indexes
         C2 = self.cov_mat[rows_to_keep][:, cols_to_keep]
+        N_mocks = 2048
+        N_bins = C2.shape[0]
+        hartlap = (N_mocks - N_bins - 2) / (N_mocks - 1)        
         #self.cov_inv_mat = np.linalg.inv(C2)
         c, low = cho_factor(C2)
-        self.cov_inv_mat = cho_solve((c, low), np.eye(C2.shape[0]))
+        cov_inv = cho_solve((c, low), np.eye(N_bins))
+        self.cov_inv_mat = hartlap * cov_inv
 
         self.obs_power = np.concatenate((
             pk['pk0'][valid_k_indices], 
@@ -78,7 +80,7 @@ class PowerSpectrumData:
 class PowerSpectrumModel:
     vmax: float
     delta_vmax: float
-    Q_id: str
+    Q_id: float
     k_sim: Optional[np.ndarray] = field(default=None, init=False)
     psim0: Optional[np.ndarray] = field(default=None, init=False)
     psim2: Optional[np.ndarray] = field(default=None, init=False)
@@ -106,7 +108,7 @@ class PowerSpectrumModel:
         pk04 = np.insert(psim4_raw.T[3], 0, pad_zeros)
 
         ptf = np.concatenate((pk00, pk02, pk04))
-        wmp = obs_data.window_mat @ obs_data.M @ ptf
+        wmp = obs_data.WM @ ptf
 
         n_bins = len(obs_data.k)
         self.k_sim = np.arange(0, 0.4, 0.01)
@@ -121,7 +123,6 @@ def calc_chi2(sim_data, obs_data):
     diff = obs_data.obs_power - sim_data.psim
     x2 = diff.T @ obs_data.cov_inv_mat @ diff
     return x2
-
 
 def plot_power_spectrum(obs_data=None, sim_data=None, save_path = None):
     if obs_data is None and sim_data is None:
