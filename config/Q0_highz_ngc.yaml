@@ -14,3 +14,5 @@ kmax: 0.30
 step_covariance:
 - [62.39, 132.88]
 - [132.88, 285.86]
+
+mcmc_seed: 1
