@@ -11,7 +11,7 @@
 #include <gsl/gsl_randist.h>
 #include "binneddata.hpp"
 
-void ps_fileload(std::string fname, Eigen::VectorXd &pk){
+void ps_fileload(std::string fname, Eigen::VectorXd &pk) {
     Eigen::VectorXd k_ps(400);
     Eigen::VectorXd k_eff(400);
     Eigen::VectorXd pk0(400);
@@ -34,11 +34,11 @@ void ps_fileload(std::string fname, Eigen::VectorXd &pk){
     int i = 0;
 
     while (std::getline(file, line)) {
-        if (within_header < 2){
-            if (line == "### header ###"){
+        if (within_header < 2) {
+            if (line == "### header ###") {
                 within_header += 1;
             }
-        } else{
+        } else {
             std::istringstream iss(line);
             iss >> k_ps(i);
             iss >> k_eff(i);
@@ -61,24 +61,21 @@ void ps_fileload(std::string fname, Eigen::VectorXd &pk){
     std::cout << "done." << std::endl;
 
     using RowMajorMatrix40x10 = Eigen::Matrix<double, 40, 10, Eigen::RowMajor>;
-
-    Eigen::Map<RowMajorMatrix40x10>weight(modes.data());
-    Eigen::Map<RowMajorMatrix40x10>pk0mat(pk0.data());
-    Eigen::Map<RowMajorMatrix40x10>pk1mat(pk1.data());
-    Eigen::Map<RowMajorMatrix40x10>pk2mat(pk2.data());
-    Eigen::Map<RowMajorMatrix40x10>pk3mat(pk3.data());
-    Eigen::Map<RowMajorMatrix40x10>pk4mat(pk4.data());
-
+    Eigen::Map<RowMajorMatrix40x10> weight(modes.data());
+    Eigen::Map<RowMajorMatrix40x10> pk0mat(pk0.data());
+    Eigen::Map<RowMajorMatrix40x10> pk1mat(pk1.data());
+    Eigen::Map<RowMajorMatrix40x10> pk2mat(pk2.data());
+    Eigen::Map<RowMajorMatrix40x10> pk3mat(pk3.data());
+    Eigen::Map<RowMajorMatrix40x10> pk4mat(pk4.data());
     Eigen::VectorXd wsum = weight.rowwise().sum();
     Eigen::VectorXd wmean0 = pk0mat.cwiseProduct(weight).rowwise().sum().cwiseQuotient(wsum);
     Eigen::VectorXd wmean2 = pk2mat.cwiseProduct(weight).rowwise().sum().cwiseQuotient(wsum);
     Eigen::VectorXd wmean4 = pk4mat.cwiseProduct(weight).rowwise().sum().cwiseQuotient(wsum);
-
     pk << wmean0, wmean2, wmean4;
 
 }
 
-void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Eigen::MatrixXd &M, Eigen::MatrixXd &W, Eigen::MatrixXd &C){
+void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Eigen::MatrixXd &M, Eigen::MatrixXd &W, Eigen::MatrixXd &C) {
     M.setZero();
     W.setZero();
     C.setZero();
@@ -86,10 +83,10 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     std::cout <<  "load M file ... ";
     std::ifstream Mfile(Mfname);
     std::string line;
-    for (int i = 0; i < 2000; i++){
+    for (int i = 0; i < 2000; i++) {
         std::getline(Mfile, line);
         std::istringstream issm(line);
-        for(int j = 0; j < 1200; j++){
+        for (int j = 0; j < 1200; j++) {
             issm >> M(i, j);
         }
     }
@@ -100,10 +97,10 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
 
     std::cout <<  "load W file ... ";
     std::ifstream Wfile(Wfname);
-    for (int i = 0; i < 200; i++){
+    for (int i = 0; i < 200; i++) {
         std::getline(Wfile, line);
         std::istringstream issw(line);
-        for (int j = 0; j < 2000; j++){
+        for (int j = 0; j < 2000; j++) {
             issw >> W(i, j);
         }
     }
@@ -120,12 +117,12 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     int ii = 0;
     int jj = 0;
     int k = 0;
-    for(int i = 0; i < 200; i++){
+    for (int i = 0; i < 200; i++) {
         std::getline(Cfile, line);
         std::istringstream issc(line);
         jj = 0;
-        for(int j = 0; j < 200; j++){
-            if((i >= 40 && i < 80) || (i >= 120 && i < 160) || (j >=40 && j< 80) || (j >= 120 && j < 160)){
+        for (int j = 0; j < 200; j++) {
+            if ((i >= 40 && i < 80) || (i >= 120 && i < 160) || (j >=40 && j< 80) || (j >= 120 && j < 160)) {
                 issc >> dummy(k);
                 k++;
             } else {
@@ -133,7 +130,7 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
                 jj++;
             }
         }
-        if(i < 40 || (i >= 80 && i < 120) || i >= 160){
+        if (i < 40 || (i >= 80 && i < 120) || i >= 160) {
             ii++;
         }
     }
@@ -143,16 +140,20 @@ void mwc_fileload(std::string Mfname, std::string Wfname, std::string Cfname, Ei
     std::cout <<  "C cols: " << C.cols() << std::endl;
 }
 
-void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eigen::MatrixXd &C, const BinnedData &pk0, const BinnedData &pk2, const BinnedData &pk4, double &x2, double fit_kmax) {
+void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM,
+                const Eigen::MatrixXd &C, const BinnedData &pk0,
+                const BinnedData &pk2, const BinnedData &pk4,
+                double &x2, double fit_kmax) {
+    constexpr int kNbinPerMultipole = 40;
+
     Eigen::VectorXd pk(1200);
     Eigen::VectorXd wmp(200);
     Eigen::VectorXd psim0(pk0.get_nbin());
     Eigen::VectorXd psim2(pk2.get_nbin());
     Eigen::VectorXd psim4(pk4.get_nbin());
     Eigen::VectorXd psim_full(120);
-    constexpr int kNbinPerMultipole = 40;
 
-    for (int i = 0; i < pk0.get_nbin(); i++){
+    for (int i = 0; i < pk0.get_nbin(); i++) {
         psim0(i) = pk0.get_ymean(i);
         psim2(i) = pk2.get_ymean(i);
         psim4(i) = pk4.get_ymean(i);
@@ -160,10 +161,12 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
 
     pk << psim0, psim2, psim4;
     wmp = WM*pk;
+
     int j = 0;
     for (int i = 0; i < kNbinPerMultipole*5; i++) {
-        if (i < kNbinPerMultipole || (i >= kNbinPerMultipole*2 && i < kNbinPerMultipole*3) || 
-        i >= kNbinPerMultipole*4) {
+        if (i < kNbinPerMultipole ||
+            (i >= kNbinPerMultipole*2 && i < kNbinPerMultipole*3) ||
+            i >= kNbinPerMultipole*4) {
             psim_full(j) = wmp(i);
             j++;
         }
@@ -175,6 +178,7 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
         std::cerr << "invalid fit_kmax: " << fit_kmax << std::endl;
         std::exit(1);
     }
+
     int sub_size = limit * 3;
     Eigen::MatrixXd C_sub(sub_size, sub_size);
     Eigen::VectorXd Bpk_sub(sub_size);
@@ -196,7 +200,6 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
         }
     }
 
-
     Eigen::VectorXd delta = Bpk_sub - psim_sub;
     Eigen::LDLT<Eigen::MatrixXd> ldlt(C_sub);
     x2 = delta.dot(ldlt.solve(delta));
@@ -204,57 +207,60 @@ void chi_square(const Eigen::VectorXd &Bpk, const Eigen::MatrixXd &WM, const Eig
     //x2 = delta.transpose() * Cinv_sub * delta;
 }
 
-void mcmc(double chi2, double& delta_v, double& v_th, std::vector<double>& chi2list, std::vector<double>& dvlist, std::vector<double>& vthlist, gsl_rng* rand_ins, int k, std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov) {
-    float dv_sig   = 4.0;
-    float vth_sig  = 4.0;
-    //double sfac = 0.001;
+void mcmc(double chi2, double& delta_v, double& v_th,
+          std::vector<double>& chi2list, std::vector<double>& dvlist,
+          std::vector<double>& vthlist, gsl_rng* rand_ins, int k,
+          std::ofstream& ofs, std::ofstream& dfs, Eigen::Matrix2d cov) {
     double sigma_x = std::sqrt(cov(0, 0));
     double sigma_y = std::sqrt(cov(1, 1));
     double cov_xy  = cov(0, 1);
     double rho     = cov_xy / (sigma_x * sigma_y);
     double step_dv, step_vth;
-    if (k == 0 || chi2 < chi2list[k-1]) {
+
+    if (k == 0 || chi2 < chi2list[k - 1]) {
         chi2list[k] = chi2;
-        dvlist[k] = delta_v;
-        vthlist[k] = v_th;
+        dvlist[k]   = delta_v;
+        vthlist[k]  = v_th;
         ofs << dvlist[k] << " " << vthlist[k] << " " << chi2list[k] << std::endl;
+
         do {
             gsl_ran_bivariate_gaussian(rand_ins, sigma_x, sigma_y, rho, &step_dv, &step_vth);
             delta_v = dvlist[k] + step_dv;
-            v_th = vthlist[k] + step_vth;
-            //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
-            //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
+            v_th    = vthlist[k] + step_vth;
         } while (delta_v < 0 || v_th < 0);
+
         std::cout << "if number: " << 0 << std::endl;
     } else {
-        double r = std::exp(-(chi2-chi2list[k-1])/2);
+        double r        = std::exp(-(chi2 - chi2list[k - 1]) / 2.0);
         double rand_num = gsl_rng_uniform(rand_ins);
+
         if (r > rand_num) {
             chi2list[k] = chi2;
-            dvlist[k] = delta_v;
-            vthlist[k] = v_th;
+            dvlist[k]   = delta_v;
+            vthlist[k]  = v_th;
             ofs << dvlist[k] << " " << vthlist[k] << " " << chi2list[k] << std::endl;
+
             do {
                 gsl_ran_bivariate_gaussian(rand_ins, sigma_x, sigma_y, rho, &step_dv, &step_vth);
                 delta_v = dvlist[k] + step_dv;
-                v_th = vthlist[k] + step_vth;
-                //delta_v = delta_v + gsl_ran_gaussian(rand_ins, dv_sig);
-                //v_th = v_th + gsl_ran_gaussian(rand_ins, vth_sig);
+                v_th    = vthlist[k] + step_vth;
+
             } while (delta_v < 0 || v_th < 0);
+
             std::cout << "if number: " << 1 << std::endl;
         } else {
-            chi2list[k] = chi2list[k-1];
-            dvlist[k] = dvlist[k-1];
-            vthlist[k] = vthlist[k-1];
+            chi2list[k] = chi2list[k - 1];
+            dvlist[k]   = dvlist[k - 1];
+            vthlist[k]  = vthlist[k - 1];
             ofs << dvlist[k] << " " << vthlist[k] << " " << chi2list[k] << std::endl;
             dfs << delta_v << " " << v_th << " " << chi2 << std::endl;
+
             do {
                 gsl_ran_bivariate_gaussian(rand_ins, sigma_x, sigma_y, rho, &step_dv, &step_vth);
-                delta_v = dvlist[k-1] + step_dv;
-                v_th = vthlist[k-1] + step_vth;
-                //delta_v = dvlist[k-1] + gsl_ran_gaussian(rand_ins, dv_sig);
-                //v_th = vthlist[k-1] + gsl_ran_gaussian(rand_ins, vth_sig);
+                delta_v = dvlist[k - 1] + step_dv;
+                v_th    = vthlist[k - 1] + step_vth;
             } while (delta_v < 0 || v_th < 0);
+
             std::cout << "if number: " << 2 << std::endl;
         }
     }

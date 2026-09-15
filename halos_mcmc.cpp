@@ -65,7 +65,7 @@ int main(int argc, char **argv){
     double redshift; // The output redshift
     int ng(512); // Number of grid points per dim for FFT
     int Npart1d;
-    int zBOSS;
+    int zBOSS = -1;
     time_t t1 = time(0);
 
     switch(snapnum){
@@ -82,7 +82,8 @@ int main(int argc, char **argv){
             break;
         default:
             redshift = 0;
-            break;
+            std::cerr << "unsupported snapnum: " << snapnum << std::endl;
+            return 1;
     }
     std::cerr << "Redshift: " << redshift << std::endl;
 
@@ -248,20 +249,14 @@ int main(int argc, char **argv){
             // Monopole moment
             int ell = 0;
             halo_overdensity.calc_power(pk0, ell, efile, Omegam_fid, redshift, los_dir);
-            // BinnedData pk0 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-            // pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
 
             // Quadrupole moment
             ell = 2;
             halo_overdensity.calc_power(pk2, ell, efile, Omegam_fid, redshift, los_dir);
-            // BinnedData pk2 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-            // pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
 
             // Hexadecapole moment
             ell = 4;
             halo_overdensity.calc_power(pk4, ell, efile, Omegam_fid, redshift, los_dir);
-            // BinnedData pk4 = halo_overdensity.calc_power(nbins, kmin, kmax, logbin, ell, efile, Omegam_fid, redshift, los_dir);
-            // pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
 
         }
         std::cout << "check delta_v = " << delta_v << std::endl;
@@ -274,9 +269,6 @@ int main(int argc, char **argv){
         time_t t2 = time(0);
         std::cout << "finish time: " << t2-t1 << std::endl;
         std::cout << "##############################################" << std::endl;
-        //pk0.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk0.dat");
-        //pk2.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk2.dat");
-        //pk4.dump(OutBase+"_"+value_str+"_"+value_str1+"_pk4.dat");
     }
     gsl_rng_free(rand_halo);
     gsl_rng_free(rand_mcmc);
