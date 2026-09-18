@@ -1,7 +1,7 @@
 # MCMC simulation settings
 file_base: "data/Q0002"
 snapnum: 0
-output_base: "output/Q2/HIGHZ_NGC_Q2_500"
+output_base: "output/Q2/HIGHZ_NGC_Q2_500_k03_1"
 
 # Model parameters
 v_th: 467.4
@@ -9,8 +9,10 @@ delta_v: 89.4
 ns_type: 0
 
 n_mc: 500
-kmax: 0.4
+kmax: 0.3
 
 step_covariance:
   - [125.82, 268.14]
   - [268.14, 576.97]
+
+mcmc_seed: 1
