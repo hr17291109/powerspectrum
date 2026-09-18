@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from blackjax.diagnostics import potential_scale_reduction
 import plot_ghc_mcmc as pgm
 #from importlib import reload
@@ -8,7 +9,10 @@ def main():
     chain1 = pgm.MCMCResult('output/Q1/HIGHZ_NGC_Q1_500_k03_cov_chi2.dat', 'output/Q1/HIGHZ_NGC_Q1_500_k03_others_cov_chi2.dat')
     sigma_prop, starts = chain1.prop_next_run(n_start=4, spread=2.0, jitter=1.0)
     print(f"acceptance = {chain1.acceptance:.4f}")
-    print("proposal covariance =\n", sigma_prop)
+    print("chi2 minimum point: ", chain1.xmin)
+    print("chi2 minimun value = ", chain1.chi2min)
+    print(pgm.format_step_covariance(sigma_prop))
+    #print("proposal covariance =\n", sigma_prop)
     print("start points =\n", starts)
     chain1.mcplot(pair=(0, 1), ax=None, savefig=None)
 
