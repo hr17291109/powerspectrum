@@ -1,11 +1,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, Matern, WhiteKernel
 from sklearn.preprocessing import StandardScaler
-
 from getdist import MCSamples, plots
 from scipy.stats import multivariate_normal
 from tqdm import tqdm
@@ -58,22 +56,15 @@ def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     chi_std  = y_std_s * scaler_y.scale_[0]
     return chi_pred, chi_std
 
-def cosomo_mcmc(covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=1.0):
+def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=1.0, chain):
     proposed_theta = np.random.multivariate_normal(current_theta, covmat)
     chi_pred_arr, chi2_std = predict_chi(proposed_theta, scaler_X, scaler_y, gpr)
     proposed_chi2 = chi_pred_arr[0] + alpha * chi2_std[0]
-    #prior_prop = prior(proposed_theta, mu_prior, cov_prior)
-    #prior_curr = prior(current_theta, mu_prior, cov_prior)
     prior_prop = prior(proposed_theta, prior_lo, prior_hi)
     prior_curr = prior(current_theta, prior_lo, prior_hi)
-    if prior_prop == 0.0:  # 境界外は即棄却
-        r = 0.0
-    else:
-        r = np.exp(-(proposed_chi2-current_chi2)/2) * (prior_prop / prior_curr)
-    #r = np.exp(-(proposed_chi2-current_chi2)/2) * (prior_prop / prior_curr)
-    #r = np.exp(-(proposed_chi2-current_chi2)/2)
 
-    if(r > np.random.uniform(0, 1)):
+    log_r = -(proposed_chi2 - current_chi2) / 2.0
+    if np.log(rng.random()) < log_r:
         th_copy = proposed_theta.copy()
         th_copy = th_copy.tolist()
         th_copy.append(proposed_chi2)
