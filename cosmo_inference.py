@@ -82,7 +82,22 @@ def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, 
         other_arr.append(list(proposed_theta) + [proposed_chi2])
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5, white=True):
+def make_kernel(n_dim, kind="rbf", white=True):
+    amp = ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
+    ls = dict(length_scale=np.ones(n_dim), length_scale_bounds=(1e-2, 1e3))
+
+    if kind == "rbf":
+        kernel = amp * RBF(**ls)
+    elif kind == "matern52":
+        kernel = amp * Matern(nu=2.5, **ls)
+    else:
+        raise ValueError(f"unknown kernel kind: {kind}")
+
+    if white:
+        kernel = kernel + WhiteKernel(noise_level=1e-2, noise_level_bounds=(1e-6, 1e1))
+    return kernel
+
+def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5, white=True):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
@@ -94,49 +109,10 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_o
     X_scaled = scaler_X.fit_transform(X_raw)
     y_scaled = scaler_y.fit_transform(y_raw.reshape(-1, 1)).ravel()
 
-    if kn == 1:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * RBF(length_scale=np.ones(X_scaled.shape[1]),
-                length_scale_bounds=(1e-2, 1e2))
-        )
-    elif kn == 2:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * RBF(length_scale=np.ones(X_scaled.shape[1]),
-                length_scale_bounds=(1e-2, 1e3))
-        )
-    elif kn == 3:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * RBF(length_scale=np.ones(X_scaled.shape[1]),
-                length_scale_bounds=(1e-1, 1e7))
-        )
-    elif kn == 4:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * RBF(length_scale=np.ones(X_scaled.shape[1]),
-                length_scale_bounds=(1e-2, 1e3))
-        )
-    elif kn == 5:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * Matern(length_scale=np.ones(X_scaled.shape[1]),
-                    length_scale_bounds=(1e-2, 1e2),
-                    nu=2.5)
-        )
-    elif kn == 6:
-        kernel = (
-            ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-3, 1e3))
-            * Matern(length_scale=np.ones(X_scaled.shape[1]),
-                    length_scale_bounds=(1e-2, 1e7),
-                    nu=2.5)
-        )
-    if white:
-        kernel = kernel + WhiteKernel(noise_level=1e-2, noise_level_bounds=(1e-6, 1e1))
+    kern = make_kernel(X_scaled.shape[1], kind=kernel, white=white)
 
     gpr = GaussianProcessRegressor(
-        kernel=kernel,
+        kernel=kern,
         n_restarts_optimizer=20,
         normalize_y=False,
         random_state=42
