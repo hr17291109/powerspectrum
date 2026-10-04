@@ -20,7 +20,6 @@ def read_paramlist(filename):
 
 def combine_data(ns, highlow):
     combined_data = []
-
     for i in range(30):
         data = np.loadtxt('output/Q'+ str(i) + '/'+highlow+'Z_'+ns+'_Q' + str(i) + '_1000_cov_chi2.dat', skiprows=1)
         p = read_paramlist(f"params/Q{str(i).zfill(4)}_input_params.ini")
@@ -55,8 +54,8 @@ def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     chi_std  = y_std_s * scaler_y.scale_[0]
     return chi_pred, chi_std
 
-def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=1.0, chain):
-    proposed_theta = np.random.multivariate_normal(current_theta, covmat)
+def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=1.0):
+    proposed_theta = rng.multivariate_normal(current_theta, covmat)
     chi_pred_arr, chi2_std = predict_chi(proposed_theta, scaler_X, scaler_y, gpr)
     proposed_chi2 = chi_pred_arr[0] + alpha * chi2_std[0]
     prior_prop = prior(proposed_theta, prior_lo, prior_hi)
@@ -79,7 +78,8 @@ def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, 
         other_arr.append(th_copy1)
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05):
+def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345):
+    rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
     y_raw = df["chi"].values
@@ -165,7 +165,7 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05):
     other_arr = []
 
     for i in tqdm(range(Nsteps)):
-        current_theta, current_chi2 = cosomo_mcmc(covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=0.5)
+        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=0.5)
 
     theta_arr = np.array(theta_arr)
 
