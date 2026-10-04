@@ -82,7 +82,7 @@ def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, 
         other_arr.append(list(proposed_theta) + [proposed_chi2])
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False):
+def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
@@ -147,7 +147,15 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_o
 
     best_row = df.loc[df["chi"].idxmin()]
     current_theta = [best_row['omega_m'], best_row['w0'], best_row['As'], best_row['ns']]
-    current_chi2  = best_row['chi']
+
+    if prior_only:
+        current_chi2 = 0.0
+    else:
+        mu0, sd0 = predict_chi(current_theta, scaler_X, scaler_y, gpr)
+        current_chi2 = mu0[0] + alpha * sd0[0]
+        print(f"初期 χ²: 実測 {best_row['chi']:.3f} / GP {current_chi2:.3f}")
+    
+    #current_chi2  = best_row['chi']
     #best_om = df.loc[df["chi"].idxmin()]['omega_m']
     #best_w0 = df.loc[df["chi"].idxmin()]['w0']
     #best_As = df.loc[df["chi"].idxmin()]['As']
@@ -162,7 +170,7 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_o
     other_arr = []
 
     for i in tqdm(range(Nsteps)):
-        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=0.5, prior_only=prior_only)
+        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=alpha, prior_only=prior_only)
 
     theta_arr = np.array(theta_arr)
 
