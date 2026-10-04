@@ -82,7 +82,7 @@ def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, 
         other_arr.append(list(proposed_theta) + [proposed_chi2])
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5):
+def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5, white=True):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
@@ -132,6 +132,8 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_o
                     length_scale_bounds=(1e-2, 1e7),
                     nu=2.5)
         )
+    if white:
+        kernel = kernel + WhiteKernel(noise_level=1e-2, noise_level_bounds=(1e-6, 1e1))
 
     gpr = GaussianProcessRegressor(
         kernel=kernel,
@@ -140,6 +142,10 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_o
         random_state=42
     )
     gpr.fit(X_scaled, y_scaled)
+    print("学習後のカーネル:", gpr.kernel_)
+    if white:
+        noise = gpr.kernel_.k2.noise_level
+        print(f"ノイズ σ (χ² 単位) = {np.sqrt(noise) * scaler_y.scale_[0]:.1f}")
 
     region = make_design_region(X_raw, r_max=r_max)
 
