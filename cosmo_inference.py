@@ -59,16 +59,19 @@ def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     chi_std  = y_std_s * scaler_y.scale_[0]
     return chi_pred, chi_std
 
-def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=1.0):
+def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=1.0, prior_only=False):
     proposed_theta = rng.multivariate_normal(current_theta, covmat)
 
     if not np.isfinite(log_prior(proposed_theta, *region)):
         theta_arr.append(list(current_theta) + [current_chi2])
         other_arr.append(list(proposed_theta) + [np.nan])
         return current_theta, current_chi2
-
-    chi_pred_arr, chi2_std = predict_chi(proposed_theta, scaler_X, scaler_y, gpr)
-    proposed_chi2 = chi_pred_arr[0] + alpha * chi2_std[0]
+    
+    if prior_only:
+        proposed_chi2 = 0.0
+    else:
+        chi_pred_arr, chi2_std = predict_chi(proposed_theta, scaler_X, scaler_y, gpr)
+        proposed_chi2 = chi_pred_arr[0] + alpha * chi2_std[0]
 
     log_r = -(proposed_chi2 - current_chi2) / 2.0
     if np.log(rng.random()) < log_r:
@@ -79,7 +82,7 @@ def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, 
         other_arr.append(list(proposed_theta) + [proposed_chi2])
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None):
+def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None, prior_only=False):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
@@ -159,7 +162,7 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None):
     other_arr = []
 
     for i in tqdm(range(Nsteps)):
-        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=0.5)
+        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=0.5, prior_only=prior_only)
 
     theta_arr = np.array(theta_arr)
 
@@ -183,4 +186,8 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None):
     print(f"採択回数: {accepted_steps}")
     print(f"棄却回数: {rejected_steps}")
     print(f"平均採択率: {acceptance_rate:.4f} ({acceptance_rate * 100:.1f}%)")
+
+    d = theta_arr[nburnin:, :4] - region[0]
+    dM = np.sqrt(np.sum((d @ region[1]) * d, axis=1))
+    print(f"r_max の 95% より外側にあるサンプルの割合: {(dM > 0.95 * region[2]).mean():.3f}")
     return mc_samples    

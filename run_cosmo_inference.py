@@ -69,6 +69,17 @@ g4.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
 g4.fig.savefig("gp_output/SGC_LOWZ_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g4.fig.savefig("gp_output/SGC_LOWZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
 
+samples_prior = ci.GPmcmc(df, Nsteps, nburnin, kn=2, prior_only=True)
+g = plots.get_subplot_plotter(subplot_size=2.5)
+g.triangle_plot(
+    [samples1, samples2, samples3, samples4, samples_prior],
+    filled=[True, True, True, True, False],
+    contour_colors=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "gray"],
+    legend_labels=["NGC HIGH", "NGC LOW", "SGC HIGH", "SGC LOW", "prior only"],
+    title_limit=1,
+)
+g.fig.savefig("gp_output/All_Data_RBF_posterior_triangle_20000_sample.png", dpi=150, bbox_inches="tight")
+
 g = plots.get_subplot_plotter(subplot_size=2.5)
 g.triangle_plot(
     [samples1, samples2, samples3, samples4],
