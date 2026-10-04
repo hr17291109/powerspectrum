@@ -27,6 +27,8 @@ def combine_data(ns, highlow):
 
         combined_data.append({
             'set_id': f'Q{i}',
+            'omega_b':   p['omega_b'],
+            'omega_cdm': p['omega_cdm'],
             'omega_m': p['Omega_m'],
             'w0': p['w0'],
             'As': p['ln(10^10As)'],
