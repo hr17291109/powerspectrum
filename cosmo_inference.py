@@ -5,7 +5,6 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, Matern, WhiteKernel
 from sklearn.preprocessing import StandardScaler
 from getdist import MCSamples, plots
-from scipy.stats import multivariate_normal
 from tqdm import tqdm
 
 def read_paramlist(filename):
@@ -41,13 +40,17 @@ def combine_data(ns, highlow):
 
     return combined_data
 
-def prior(theta, mu_prior, cov_prior):
-    return multivariate_normal.pdf(theta, mean=mu_prior, cov=cov_prior)
+def make_design_region(X_raw, r_max=None):
+    mu = X_raw.mean(axis=0)
+    cov_inv = np.linalg.inv(np.cov(X_raw.T))
+    if r_max is None:
+        d = X_raw - mu
+        r_max = np.sqrt(np.sum((d @ cov_inv) * d, axis=1)).max()
+    return mu, cov_inv, r_max
 
-def prior(theta, prior_lo, prior_hi):
-    if np.all(theta > prior_lo) and np.all(theta < prior_hi):
-        return 1.0
-    return 0.0
+def log_prior(theta, mu, cov_inv, r_max):
+    d = np.asarray(theta) - mu
+    return 0.0 if d @ cov_inv @ d < r_max**2 else -np.inf
 
 def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     X_s = scaler_X.transform(np.atleast_2d(theta_array))
@@ -56,31 +59,27 @@ def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     chi_std  = y_std_s * scaler_y.scale_[0]
     return chi_pred, chi_std
 
-def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=1.0):
+def cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=1.0):
     proposed_theta = rng.multivariate_normal(current_theta, covmat)
+
+    if not np.isfinite(log_prior(proposed_theta, *region)):
+        theta_arr.append(list(current_theta) + [current_chi2])
+        other_arr.append(list(proposed_theta) + [np.nan])
+        return current_theta, current_chi2
+
     chi_pred_arr, chi2_std = predict_chi(proposed_theta, scaler_X, scaler_y, gpr)
     proposed_chi2 = chi_pred_arr[0] + alpha * chi2_std[0]
-    prior_prop = prior(proposed_theta, prior_lo, prior_hi)
-    prior_curr = prior(current_theta, prior_lo, prior_hi)
 
     log_r = -(proposed_chi2 - current_chi2) / 2.0
     if np.log(rng.random()) < log_r:
-        th_copy = proposed_theta.copy()
-        th_copy = th_copy.tolist()
-        th_copy.append(proposed_chi2)
-        theta_arr.append(th_copy)
+        theta_arr.append(list(proposed_theta) + [proposed_chi2])
         return proposed_theta, proposed_chi2
     else:
-        th_copy = current_theta.tolist() if isinstance(current_theta, np.ndarray) else list(current_theta)
-        th_copy.append(current_chi2)
-        theta_arr.append(th_copy)
-        th_copy1 = proposed_theta.copy()
-        th_copy1 = th_copy1.tolist()
-        th_copy1.append(proposed_chi2)
-        other_arr.append(th_copy1)
+        theta_arr.append(list(current_theta) + [current_chi2])
+        other_arr.append(list(proposed_theta) + [proposed_chi2])
         return current_theta, current_chi2
 
-def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345):
+def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345, r_max=None):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
@@ -139,16 +138,9 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345):
     )
     gpr.fit(X_scaled, y_scaled)
 
-    #mu_prior    = X_raw.mean(axis=0)
-    #cov_prior   = np.cov(X_raw.T)
-
-    data_range = X_raw.max(axis=0) - X_raw.min(axis=0)
-    margin = 0.1 * data_range
-    prior_lo = X_raw.min(axis=0) - margin
-    prior_hi = X_raw.max(axis=0) + margin
+    region = make_design_region(X_raw, r_max=r_max)
 
     covmat = np.cov(X_raw.T) * step
-    #covmat = cov_prior*step
 
     best_row = df.loc[df["chi"].idxmin()]
     current_theta = [best_row['omega_m'], best_row['w0'], best_row['As'], best_row['ns']]
@@ -167,7 +159,7 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05, seed=12345):
     other_arr = []
 
     for i in tqdm(range(Nsteps)):
-        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, prior_lo, prior_hi, alpha=0.5)
+        current_theta, current_chi2 = cosomo_mcmc(rng, covmat, current_theta, current_chi2, other_arr, theta_arr, scaler_X, scaler_y, gpr, region, alpha=0.5)
 
     theta_arr = np.array(theta_arr)
 

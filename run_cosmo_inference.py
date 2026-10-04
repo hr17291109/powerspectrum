@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import cosmo_inference as ci
 from getdist import plots
+from importlib import reload
+reload(ci)
 
 NHdata = ci.combine_data('NGC', 'HIGH')
 df = pd.DataFrame(NHdata)
@@ -16,7 +18,7 @@ g1.triangle_plot(
     title_limit=1,
 )
 g1.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g1.fig.savefig("gp_output/NGC_HIGHZ_RBF_posterior_triangle_20000_c1_t.png", dpi=150, bbox_inches="tight")
+g1.fig.savefig("gp_output/NGC_HIGHZ_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g1.fig.savefig("NGC_HIGHZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
 
 NLdata = ci.combine_data('NGC', 'LOW')
@@ -32,7 +34,7 @@ g2.triangle_plot(
     title_limit=1,
 )
 g2.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g2.fig.savefig("gp_output/NGC_LOWZ_RBF_posterior_triangle_20000_c1_t.png", dpi=150, bbox_inches="tight")
+g2.fig.savefig("gp_output/NGC_LOWZ_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g2.fig.savefig("gp_output/NGC_LOWZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
 
 SHdata = ci.combine_data('SGC', 'HIGH')
@@ -48,7 +50,7 @@ g3.triangle_plot(
     title_limit=1,
 )
 g3.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g3.fig.savefig("gp_output/SGC_HIGHZ_RBF_posterior_triangle_20000_c1_t.png", dpi=150, bbox_inches="tight")
+g3.fig.savefig("gp_output/SGC_HIGHZ_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g3.fig.savefig("gp_output/SGC_HIGHZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
 
 SLdata = ci.combine_data('SGC', 'LOW')
@@ -64,7 +66,7 @@ g4.triangle_plot(
     title_limit=1,
 )
 g4.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g4.fig.savefig("gp_output/SGC_LOWZ_RBF_posterior_triangle_20000_c1_t.png", dpi=150, bbox_inches="tight")
+g4.fig.savefig("gp_output/SGC_LOWZ_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g4.fig.savefig("gp_output/SGC_LOWZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
 
 g = plots.get_subplot_plotter(subplot_size=2.5)
@@ -76,5 +78,5 @@ g.triangle_plot(
     title_limit=1,
 )
 g.fig.suptitle("Posterior Distribution (GP + MCMC) - All Data", fontsize=14, y=1.01)
-g.fig.savefig("gp_output/All_Data_RBF_posterior_triangle_20000_c1_t.png", dpi=150, bbox_inches="tight")
+g.fig.savefig("gp_output/All_Data_RBF_posterior_triangle_20000_c1_t2.png", dpi=150, bbox_inches="tight")
 #g.fig.savefig("gp_output/All_Data_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
