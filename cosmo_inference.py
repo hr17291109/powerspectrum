@@ -47,7 +47,6 @@ def prior(theta, prior_lo, prior_hi):
     if np.all(theta > prior_lo) and np.all(theta < prior_hi):
         return 1.0
     return 0.0
-    
 
 def predict_chi(theta_array, scaler_X, scaler_y, gpr):
     X_s = scaler_X.transform(np.atleast_2d(theta_array))
@@ -191,79 +190,3 @@ def GPmcmc(df, Nsteps, nburnin, kn=1, step=0.05):
     print(f"棄却回数: {rejected_steps}")
     print(f"平均採択率: {acceptance_rate:.4f} ({acceptance_rate * 100:.1f}%)")
     return mc_samples    
-
-NHdata = combine_data('NGC', 'HIGH')
-df = pd.DataFrame(NHdata)
-Nsteps = 20000
-nburnin = 4000
-samples1=GPmcmc(df, Nsteps, nburnin, kn=2)
-g1 = plots.get_subplot_plotter(subplot_size=2.5)
-g1.triangle_plot(
-    samples1,
-    filled=True,
-    contour_colors=["steelblue"],
-    title_limit=1,
-)
-g1.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g1.fig.savefig("NGC_HIGHZ_RBF_posterior_triangle_20000_c1.png", dpi=150, bbox_inches="tight")
-#g1.fig.savefig("NGC_HIGHZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
-
-NLdata = combine_data('NGC', 'LOW')
-df2 = pd.DataFrame(NLdata)
-Nsteps = 20000
-nburnin = 4000
-samples2=GPmcmc(df2, Nsteps, nburnin, kn=2)
-g2 = plots.get_subplot_plotter(subplot_size=2.5)
-g2.triangle_plot(
-    samples2,
-    filled=True,
-    contour_colors=["steelblue"],
-    title_limit=1,
-)
-g2.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g2.fig.savefig("NGC_LOWZ_RBF_posterior_triangle_20000_c1.png", dpi=150, bbox_inches="tight")
-#g2.fig.savefig("NGC_LOWZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
-
-SHdata = combine_data('SGC', 'HIGH')
-df3 = pd.DataFrame(SHdata)
-Nsteps = 20000
-nburnin = 4000
-samples3=GPmcmc(df3, Nsteps, nburnin, kn=2)
-g3 = plots.get_subplot_plotter(subplot_size=2.5)
-g3.triangle_plot(
-    samples3,
-    filled=True,
-    contour_colors=["steelblue"],
-    title_limit=1,
-)
-g3.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g3.fig.savefig("SGC_HIGHZ_RBF_posterior_triangle_20000_c1.png", dpi=150, bbox_inches="tight")
-#g3.fig.savefig("SGC_HIGHZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
-
-SLdata = combine_data('SGC', 'LOW')
-df4 = pd.DataFrame(SLdata)
-Nsteps = 20000
-nburnin = 4000
-samples4=GPmcmc(df4, Nsteps, nburnin, kn=2)
-g4 = plots.get_subplot_plotter(subplot_size=2.5)
-g4.triangle_plot(
-    samples4,
-    filled=True,
-    contour_colors=["steelblue"],
-    title_limit=1,
-)
-g4.fig.suptitle("Posterior Distribution (GP + MCMC)", fontsize=14, y=1.01)
-g4.fig.savefig("SGC_LOWZ_RBF_posterior_triangle_20000_c1.png", dpi=150, bbox_inches="tight")
-#g4.fig.savefig("SGC_LOWZ_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
-
-g = plots.get_subplot_plotter(subplot_size=2.5)
-g.triangle_plot(
-    [samples1, samples2, samples3, samples4],
-    filled=True,
-    contour_colors=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"],
-    legend_labels=["NGC HIGH", "NGC LOW", "SGC HIGH", "SGC LOW"],
-    title_limit=1,
-)
-g.fig.suptitle("Posterior Distribution (GP + MCMC) - All Data", fontsize=14, y=1.01)
-g.fig.savefig("All_Data_RBF_posterior_triangle_20000_c1.png", dpi=150, bbox_inches="tight")
-#g.fig.savefig("All_Data_Matern_posterior_triangle_100000.png", dpi=150, bbox_inches="tight")
