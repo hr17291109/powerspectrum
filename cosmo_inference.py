@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, Matern, WhiteKernel
 from sklearn.preprocessing import StandardScaler
-from getdist import MCSamples, plots
+from getdist import MCSamples
 from tqdm import tqdm
 
 def read_paramlist(filename):
@@ -97,11 +96,12 @@ def make_kernel(n_dim, kind="rbf", white=True):
         kernel = kernel + WhiteKernel(noise_level=1e-2, noise_level_bounds=(1e-6, 1e1))
     return kernel
 
-def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5, white=True):
+def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None, prior_only=False, alpha=0.5, white=True, y_col="chi"):
     rng = np.random.default_rng(seed)
     param_names = ["omega_m", "w0", "As", "ns"]
     X_raw = df[param_names].values
-    y_raw = df["chi"].values
+    y_raw = df[y_col].values
+    #y_raw = df["chi"].values
 
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
@@ -127,7 +127,7 @@ def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None,
 
     covmat = np.cov(X_raw.T) * step
 
-    best_row = df.loc[df["chi"].idxmin()]
+    best_row = df.loc[df[y_col].idxmin()]
     current_theta = [best_row['omega_m'], best_row['w0'], best_row['As'], best_row['ns']]
 
     if prior_only:
@@ -135,7 +135,7 @@ def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None,
     else:
         mu0, sd0 = predict_chi(current_theta, scaler_X, scaler_y, gpr)
         current_chi2 = mu0[0] + alpha * sd0[0]
-        print(f"初期 χ²: 実測 {best_row['chi']:.3f} / GP {current_chi2:.3f}")
+        print(f"初期 χ²: 実測 {best_row[y_col]:.3f} / GP {current_chi2:.3f}")
     
     theta_arr = []
     th_copy = current_theta.copy()
