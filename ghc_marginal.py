@@ -43,17 +43,38 @@ def chi2_simple_average(chi2):
     chi2 = np.asarray(chi2, dtype=float)
     return -2.0 * (logsumexp(-0.5 * chi2) - np.log(len(chi2)))
 
+# def summarize(i, region, zbin, outdir="output"):
+#     chi2 = load_best_chain(i, region, zbin, outdir)[:, COL_CHI2]
+#     return {
+#         "set_id": f"Q{i}",
+#         "chi_min": chi2.min(),
+#         "chi_avg": chi2_simple_average(chi2),
+#     }
+
+def log_det_2pi_cov(chain):
+    cov = np.cov(chain[:, :2].T)
+    sign, logdet = np.linalg.slogdet(2 * np.pi * cov)
+    if sign <= 0:
+        raise ValueError("chain covariance is not positive definite")
+    return logdet
+
 def summarize(i, region, zbin, outdir="output"):
-    chi2 = load_best_chain(i, region, zbin, outdir)[:, COL_CHI2]
+    chain = load_best_chain(i, region, zbin, outdir)
+    chi2 = chain[:, COL_CHI2]
+    chi_avg = chi2_simple_average(chi2)
+    logdet = log_det_2pi_cov(chain)
     return {
         "set_id": f"Q{i}",
         "chi_min": chi2.min(),
-        "chi_avg": chi2_simple_average(chi2),
+        "chi_avg": chi_avg,
+        "logdet": logdet,
+        "chi_gauss": chi_avg - 2.0 * np.log(2.0) - logdet,
     }
-
 
 def build_table(region, zbin, outdir="output", n_cosmo=N_COSMO):
     return pd.DataFrame([summarize(i, region, zbin, outdir) for i in range(n_cosmo)])
+
+
 
 def main():
     ap = argparse.ArgumentParser(description="内側チェーンの χ² を宇宙論ごとにまとめる")
@@ -67,12 +88,13 @@ def main():
     for region in args.region:
         for zbin in args.zbin:
             df = build_table(region, zbin, args.outdir)
-            path = Path(args.savedir) / f"ghc_{zbin}Z_{region}.csv"
+            path = Path(args.savedir) / f"ghc_{zbin}Z_{region}_marge.csv"
             df.to_csv(path, index=False)
             diff = df["chi_avg"] - df["chi_min"]
             print(f"{zbin}Z {region} -> {path}   "
-                  f"diff: 平均 {diff.mean():.2f}, 標準偏差 {diff.std():.2f}")
-
+                  f"diff: 標準偏差 {diff.std():.2f}   "
+                  f"logdet: 平均 {df['logdet'].mean():.2f}, 標準偏差 {df['logdet'].std():.2f}, "
+                  f"範囲 {df['logdet'].min():.2f}〜{df['logdet'].max():.2f}")
 
 if __name__ == "__main__":
     main()
