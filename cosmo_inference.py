@@ -137,18 +137,10 @@ def GPmcmc(df, Nsteps, nburnin, kernel="rbf", step=0.05, seed=12345, r_max=None,
         current_chi2 = mu0[0] + alpha * sd0[0]
         print(f"初期 χ²: 実測 {best_row['chi']:.3f} / GP {current_chi2:.3f}")
     
-    #current_chi2  = best_row['chi']
-    #best_om = df.loc[df["chi"].idxmin()]['omega_m']
-    #best_w0 = df.loc[df["chi"].idxmin()]['w0']
-    #best_As = df.loc[df["chi"].idxmin()]['As']
-    #best_ns = df.loc[df["chi"].idxmin()]['ns']
-    #best_chi2 = df.loc[df["chi"].idxmin()]['chi']
-    #current_theta = [best_om, best_w0, best_As, best_ns]
     theta_arr = []
     th_copy = current_theta.copy()
     th_copy.append(current_chi2)
     theta_arr.append(th_copy)
-    #current_chi2 = best_chi2
     other_arr = []
 
     for i in tqdm(range(Nsteps)):
